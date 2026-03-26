@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { adminAuth } from '../middleware/auth.js';
+import { calcPayroll, calcCashBreakdown } from '../services/payroll.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -387,6 +388,222 @@ router.delete('/attendance/:recordId', adminAuth, async (req, res) => {
   } catch {
     res.status(404).json({ error: '打刻記録が見つかりません' });
   }
+});
+
+// --- 月次設定 ---
+
+// 月次設定取得
+router.get('/monthly-settings', adminAuth, async (req, res) => {
+  const { month } = req.query;
+  if (!month) return res.status(400).json({ error: 'monthは必須です' });
+
+  const setting = await prisma.adminSetting.findUnique({
+    where: { key: `monthly_settings_${month}` },
+  });
+
+  const defaults = { scheduledWorkDays: 22 };
+  if (setting) {
+    res.json({ ...defaults, ...JSON.parse(setting.value) });
+  } else {
+    res.json(defaults);
+  }
+});
+
+// 月次設定更新
+router.put('/monthly-settings', adminAuth, async (req, res) => {
+  const { month, scheduledWorkDays } = req.body;
+  if (!month) return res.status(400).json({ error: 'monthは必須です' });
+
+  const key = `monthly_settings_${month}`;
+  const value = JSON.stringify({ scheduledWorkDays: parseInt(scheduledWorkDays) || 22 });
+
+  await prisma.adminSetting.upsert({
+    where: { key },
+    update: { value },
+    create: { key, value },
+  });
+
+  res.json({ success: true });
+});
+
+// --- 月次手動入力 ---
+
+// 月次手動入力取得
+router.get('/monthly-extra', adminAuth, async (req, res) => {
+  const { month } = req.query;
+  if (!month) return res.status(400).json({ error: 'monthは必須です' });
+
+  const inputs = await prisma.monthlyExtraInput.findMany({
+    where: { yearMonth: month },
+    include: { staff: { select: { id: true, name: true } } },
+  });
+  res.json(inputs);
+});
+
+// 月次手動入力更新（upsert）
+router.put('/monthly-extra', adminAuth, async (req, res) => {
+  const { staffId, yearMonth, mealCount, mealDeductionCount, notes } = req.body;
+  if (!staffId || !yearMonth) return res.status(400).json({ error: 'staffIdとyearMonthは必須です' });
+
+  const input = await prisma.monthlyExtraInput.upsert({
+    where: { staffId_yearMonth: { staffId, yearMonth } },
+    update: {
+      mealCount: parseInt(mealCount) || 0,
+      mealDeductionCount: parseInt(mealDeductionCount) || 0,
+      notes: notes || null,
+    },
+    create: {
+      staffId,
+      yearMonth,
+      mealCount: parseInt(mealCount) || 0,
+      mealDeductionCount: parseInt(mealDeductionCount) || 0,
+      notes: notes || null,
+    },
+  });
+  res.json(input);
+});
+
+// --- 給与計算 ---
+
+// 給与計算実行
+router.post('/payroll/calculate', adminAuth, async (req, res) => {
+  const { yearMonth } = req.body;
+  if (!yearMonth) return res.status(400).json({ error: 'yearMonthは必須です' });
+
+  const [year, mon] = yearMonth.split('-').map(Number);
+  const jstOffset = 9 * 60 * 60 * 1000;
+  const start = new Date(new Date(year, mon - 1, 1).getTime() - jstOffset);
+  const end = new Date(new Date(year, mon, 1).getTime() - jstOffset);
+
+  // 月次設定取得
+  const settingRow = await prisma.adminSetting.findUnique({
+    where: { key: `monthly_settings_${yearMonth}` },
+  });
+  const monthlySettings = settingRow ? JSON.parse(settingRow.value) : { scheduledWorkDays: 22 };
+
+  // 全スタッフ取得
+  const staffs = await prisma.staff.findMany({ where: { isActive: true } });
+
+  // 全打刻取得
+  const allRecords = await prisma.timeRecord.findMany({
+    where: { recordedAt: { gte: start, lt: end } },
+    orderBy: { recordedAt: 'asc' },
+  });
+
+  // 月次手動入力取得
+  const extraInputs = await prisma.monthlyExtraInput.findMany({
+    where: { yearMonth },
+  });
+  const extraMap = {};
+  for (const e of extraInputs) {
+    extraMap[e.staffId] = e;
+  }
+
+  // スタッフごとに計算
+  const results = [];
+  for (const staff of staffs) {
+    const staffRecords = allRecords.filter((r) => r.staffId === staff.id);
+    const extraInput = extraMap[staff.id] || {};
+    const result = calcPayroll(staff, staffRecords, yearMonth, extraInput, monthlySettings);
+
+    // DB保存（upsert）
+    await prisma.payrollRecord.upsert({
+      where: {
+        staffId_yearMonth_isBonus: { staffId: staff.id, yearMonth, isBonus: false },
+      },
+      update: { ...result, calculatedAt: new Date() },
+      create: { staffId: staff.id, yearMonth, isBonus: false, ...result, calculatedAt: new Date() },
+    });
+
+    results.push({
+      staffId: staff.id,
+      staffName: staff.name,
+      ...result,
+      cashBreakdown: calcCashBreakdown(result.netPay),
+    });
+  }
+
+  res.json(results);
+});
+
+// 計算結果一覧取得
+router.get('/payroll', adminAuth, async (req, res) => {
+  const { month } = req.query;
+  if (!month) return res.status(400).json({ error: 'monthは必須です' });
+
+  const records = await prisma.payrollRecord.findMany({
+    where: { yearMonth: month },
+    include: { staff: { select: { id: true, name: true } } },
+    orderBy: { staff: { createdAt: 'asc' } },
+  });
+
+  const results = records.map((r) => ({
+    ...r,
+    staffName: r.staff.name,
+    cashBreakdown: calcCashBreakdown(r.netPay),
+  }));
+
+  res.json(results);
+});
+
+// 個別明細取得
+router.get('/payroll/:staffId', adminAuth, async (req, res) => {
+  const { month } = req.query;
+  const { staffId } = req.params;
+  if (!month) return res.status(400).json({ error: 'monthは必須です' });
+
+  const record = await prisma.payrollRecord.findFirst({
+    where: { staffId, yearMonth: month, isBonus: false },
+    include: { staff: true },
+  });
+
+  if (!record) return res.status(404).json({ error: 'データが見つかりません' });
+
+  res.json({
+    ...record,
+    staffName: record.staff.name,
+    cashBreakdown: calcCashBreakdown(record.netPay),
+  });
+});
+
+// --- 賞与 ---
+
+// 賞与登録
+router.post('/bonus', adminAuth, async (req, res) => {
+  const { staffId, yearMonth, grossPay, incomeTax, healthInsurance, careInsurance, pension, employmentInsurance } = req.body;
+  if (!staffId || !yearMonth) return res.status(400).json({ error: 'staffIdとyearMonthは必須です' });
+
+  const gross = parseInt(grossPay) || 0;
+  const tax = parseInt(incomeTax) || 0;
+  const hi = parseInt(healthInsurance) || 0;
+  const ci = parseInt(careInsurance) || 0;
+  const pen = parseInt(pension) || 0;
+  const ei = parseInt(employmentInsurance) || 0;
+  const totalDed = tax + hi + ci + pen + ei;
+
+  const record = await prisma.payrollRecord.upsert({
+    where: {
+      staffId_yearMonth_isBonus: { staffId, yearMonth, isBonus: true },
+    },
+    update: {
+      grossPay: gross, incomeTax: tax, healthInsurance: hi, careInsurance: ci,
+      pension: pen, employmentInsurance: ei, totalDeduction: totalDed,
+      netPay: gross - totalDed, calculatedAt: new Date(),
+    },
+    create: {
+      staffId, yearMonth, isBonus: true,
+      workDays: 0, totalWorkMinutes: 0, normalWorkMinutes: 0,
+      overtimeMinutes: 0, nightWorkMinutes: 0, holidayWorkMinutes: 0,
+      basePay: gross, overtimePay: 0, nightPay: 0, holidayPay: 0,
+      transportAllowance: 0, mealAllowance: 0,
+      grossPay: gross, incomeTax: tax, healthInsurance: hi, careInsurance: ci,
+      pension: pen, employmentInsurance: ei, mealDeduction: 0, rentDeduction: 0,
+      totalDeduction: totalDed, netPay: gross - totalDed,
+      calculatedAt: new Date(),
+    },
+  });
+
+  res.json(record);
 });
 
 export default router;

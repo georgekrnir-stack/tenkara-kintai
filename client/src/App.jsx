@@ -6,6 +6,7 @@ import StaffManagement from './pages/StaffManagement';
 import AdminLayout from './components/AdminLayout';
 import PunchPage from './pages/PunchPage';
 import Attendance from './pages/Attendance';
+import Payroll from './pages/Payroll';
 
 function ProtectedRoute({ children }) {
   const { token, loading } = useAuth();
@@ -27,6 +28,7 @@ function AppRoutes() {
         <Route index element={<AdminDashboard />} />
         <Route path="staff" element={<StaffManagement />} />
         <Route path="attendance" element={<Attendance />} />
+        <Route path="payroll" element={<Payroll />} />
       </Route>
       <Route path="/" element={<Navigate to="/admin" />} />
     </Routes>
