@@ -8,6 +8,7 @@ import PunchPage from './pages/PunchPage';
 import Attendance from './pages/Attendance';
 import Payroll from './pages/Payroll';
 import Reports from './pages/Reports';
+import EmployeePage from './pages/EmployeePage';
 
 function ProtectedRoute({ children }) {
   const { token, loading } = useAuth();
@@ -32,6 +33,7 @@ function AppRoutes() {
         <Route path="payroll" element={<Payroll />} />
         <Route path="reports" element={<Reports />} />
       </Route>
+      <Route path="/employee/:token" element={<EmployeePage />} />
       <Route path="/" element={<Navigate to="/admin" />} />
     </Routes>
   );

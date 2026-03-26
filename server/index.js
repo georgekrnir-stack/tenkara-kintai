@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import adminRoutes from './routes/admin.js';
 import punchRoutes from './routes/punch.js';
 import reportsRoutes from './routes/reports.js';
+import employeeRoutes from './routes/employee.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use('/api/admin', adminRoutes);
 app.use('/api/punch', punchRoutes);
 app.use('/api/admin/reports', reportsRoutes);
+app.use('/api/employee', employeeRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
