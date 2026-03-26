@@ -7,6 +7,7 @@ import AdminLayout from './components/AdminLayout';
 import PunchPage from './pages/PunchPage';
 import Attendance from './pages/Attendance';
 import Payroll from './pages/Payroll';
+import Reports from './pages/Reports';
 
 function ProtectedRoute({ children }) {
   const { token, loading } = useAuth();
@@ -29,6 +30,7 @@ function AppRoutes() {
         <Route path="staff" element={<StaffManagement />} />
         <Route path="attendance" element={<Attendance />} />
         <Route path="payroll" element={<Payroll />} />
+        <Route path="reports" element={<Reports />} />
       </Route>
       <Route path="/" element={<Navigate to="/admin" />} />
     </Routes>
