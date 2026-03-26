@@ -197,6 +197,24 @@ export default function StaffForm({ staff, onSubmit, onCancel }) {
       {/* 従業員ページ */}
       <section>
         <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b pb-1">従業員ページ</h3>
+        {staff?.employeeUrlToken && (
+          <div className="mb-3">
+            <label className="block text-sm text-gray-600 mb-1">従業員ページURL</label>
+            <div className="flex items-center gap-2">
+              <input type="text" readOnly
+                value={`${window.location.origin}/employee/${staff.employeeUrlToken}`}
+                className="w-full border rounded px-3 py-2 text-sm bg-gray-50 text-gray-700" />
+              <button type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/employee/${staff.employeeUrlToken}`);
+                }}
+                className="shrink-0 bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm hover:bg-gray-300">
+                コピー
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">このURLをスタッフに共有してください</p>
+          </div>
+        )}
         <div>
           <label className="block text-sm text-gray-600 mb-1">
             パスワード{staff ? '（変更する場合のみ入力）' : ''}

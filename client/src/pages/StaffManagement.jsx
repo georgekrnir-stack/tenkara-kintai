@@ -129,9 +129,16 @@ export default function StaffManagement() {
                       {s.isActive ? '有効' : '無効'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
                     <button onClick={() => { setEditTarget(s); setMode('edit'); }}
                       className="text-blue-600 hover:underline text-xs mr-3">編集</button>
+                    {s.employeeUrlToken && (
+                      <button onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/employee/${s.employeeUrlToken}`);
+                        alert(`${s.name}さんの従業員ページURLをコピーしました`);
+                      }}
+                        className="text-green-600 hover:underline text-xs mr-3">URL共有</button>
+                    )}
                     {s.isActive && (
                       <button onClick={() => handleDeactivate(s.id)}
                         className="text-red-600 hover:underline text-xs">無効化</button>
