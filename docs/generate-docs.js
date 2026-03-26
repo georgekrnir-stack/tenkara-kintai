@@ -2,7 +2,7 @@ import {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   HeadingLevel, AlignmentType, WidthType, BorderStyle,
   Header, Footer, PageNumber, NumberFormat,
-  TableOfContents, ShadingType, PageBreak,
+  TableOfContents, ShadingType, PageBreak, TableLayoutType,
 } from 'docx';
 import fs from 'fs';
 import path from 'path';
@@ -93,30 +93,53 @@ function note(text) {
 }
 
 function makeTable(headers, rows) {
+  // A4 content width = 11906 - 1134*2 = 9638 DXA
+  const TABLE_WIDTH = 9638;
+  const colCount = headers.length;
+  const colWidth = Math.floor(TABLE_WIDTH / colCount);
+  const colWidths = Array(colCount).fill(colWidth);
+
+  const cellBorders = {
+    top: { style: BorderStyle.SINGLE, size: 4, color: 'D1D5DB' },
+    bottom: { style: BorderStyle.SINGLE, size: 4, color: 'D1D5DB' },
+    left: { style: BorderStyle.SINGLE, size: 4, color: 'D1D5DB' },
+    right: { style: BorderStyle.SINGLE, size: 4, color: 'D1D5DB' },
+  };
+  const cellMargins = { top: 60, bottom: 60, left: 120, right: 120 };
+
   const headerRow = new TableRow({
     tableHeader: true,
-    children: headers.map(h => new TableCell({
+    children: headers.map((h, ci) => new TableCell({
       children: [new Paragraph({
         children: [new TextRun({ text: h, bold: true, color: 'FFFFFF', font: 'Yu Gothic', size: 20 })],
         alignment: AlignmentType.CENTER,
+        spacing: { before: 0, after: 0, line: 240 },
       })],
       shading: { type: ShadingType.CLEAR, fill: BLUE },
-      width: { size: Math.floor(100 / headers.length), type: WidthType.PERCENTAGE },
+      borders: cellBorders,
+      margins: cellMargins,
+      width: { size: colWidths[ci], type: WidthType.DXA },
     })),
   });
 
   const dataRows = rows.map((row, ri) => new TableRow({
-    children: row.map(cell => new TableCell({
+    children: row.map((cell, ci) => new TableCell({
       children: [new Paragraph({
         children: [new TextRun({ text: String(cell), font: 'Yu Gothic', size: 20 })],
+        spacing: { before: 0, after: 0, line: 240 },
       })],
       shading: ri % 2 === 1 ? { type: ShadingType.CLEAR, fill: LIGHT_GRAY } : undefined,
+      borders: cellBorders,
+      margins: cellMargins,
+      width: { size: colWidths[ci], type: WidthType.DXA },
     })),
   }));
 
   return new Table({
     rows: [headerRow, ...dataRows],
-    width: { size: 100, type: WidthType.PERCENTAGE },
+    width: { size: TABLE_WIDTH, type: WidthType.DXA },
+    layout: TableLayoutType.FIXED,
+    columnWidths: colWidths,
   });
 }
 

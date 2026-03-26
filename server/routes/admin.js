@@ -153,17 +153,16 @@ router.put('/staff/:id', adminAuth, async (req, res) => {
 router.get('/dashboard/today', adminAuth, async (req, res) => {
   const dateParam = req.query.date;
   const jstOffset = 9 * 60 * 60 * 1000;
-  let targetDate;
-
+  let start;
   if (dateParam) {
-    targetDate = new Date(dateParam + 'T00:00:00+09:00');
+    // new Date('2026-03-26T00:00:00+09:00') → already UTC equivalent of JST midnight
+    start = new Date(dateParam + 'T00:00:00+09:00');
   } else {
     const now = new Date();
     const jstNow = new Date(now.getTime() + jstOffset);
-    targetDate = new Date(jstNow.getFullYear(), jstNow.getMonth(), jstNow.getDate());
+    const jstDate = new Date(jstNow.getFullYear(), jstNow.getMonth(), jstNow.getDate());
+    start = new Date(jstDate.getTime() - jstOffset);
   }
-
-  const start = new Date(targetDate.getTime() - jstOffset);
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
 
   const staffs = await prisma.staff.findMany({
