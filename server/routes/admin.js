@@ -146,6 +146,84 @@ router.put('/staff/:id', adminAuth, async (req, res) => {
   }
 });
 
+// --- ダッシュボード ---
+
+// 当日出勤状況 + タイムラインデータ
+router.get('/dashboard/today', adminAuth, async (req, res) => {
+  const dateParam = req.query.date;
+  const jstOffset = 9 * 60 * 60 * 1000;
+  let targetDate;
+
+  if (dateParam) {
+    targetDate = new Date(dateParam + 'T00:00:00+09:00');
+  } else {
+    const now = new Date();
+    const jstNow = new Date(now.getTime() + jstOffset);
+    targetDate = new Date(jstNow.getFullYear(), jstNow.getMonth(), jstNow.getDate());
+  }
+
+  const start = new Date(targetDate.getTime() - jstOffset);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+
+  const staffs = await prisma.staff.findMany({
+    where: { isActive: true },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, name: true },
+  });
+
+  const records = await prisma.timeRecord.findMany({
+    where: {
+      recordedAt: { gte: start, lt: end },
+      staff: { isActive: true },
+    },
+    orderBy: { recordedAt: 'asc' },
+  });
+
+  const recordsByStaff = {};
+  for (const r of records) {
+    if (!recordsByStaff[r.staffId]) recordsByStaff[r.staffId] = [];
+    recordsByStaff[r.staffId].push(r);
+  }
+
+  const statusLabel = {
+    not_working: '未出勤',
+    working: '出勤中',
+    on_break: '休憩中',
+    clocked_out: '退勤済み',
+  };
+
+  const result = staffs.map((s) => {
+    const staffRecords = recordsByStaff[s.id] || [];
+    let status = 'not_working';
+    if (staffRecords.length > 0) {
+      const sorted = [...staffRecords].sort(
+        (a, b) => new Date(b.recordedAt) - new Date(a.recordedAt)
+      );
+      switch (sorted[0].recordType) {
+        case 'clock_in': case 'break_end': status = 'working'; break;
+        case 'break_start': status = 'on_break'; break;
+        case 'clock_out': status = 'clocked_out'; break;
+      }
+    }
+    return {
+      id: s.id,
+      name: s.name,
+      status,
+      statusLabel: statusLabel[status],
+      records: staffRecords.map((r) => ({
+        id: r.id,
+        recordType: r.recordType,
+        recordedAt: r.recordedAt,
+      })),
+    };
+  });
+
+  const counts = { working: 0, on_break: 0, clocked_out: 0, not_working: 0 };
+  result.forEach((s) => counts[s.status]++);
+
+  res.json({ staffs: result, counts });
+});
+
 // スタッフ無効化
 router.patch('/staff/:id/deactivate', adminAuth, async (req, res) => {
   try {

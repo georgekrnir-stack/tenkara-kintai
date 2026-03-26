@@ -4,6 +4,7 @@ import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import StaffManagement from './pages/StaffManagement';
 import AdminLayout from './components/AdminLayout';
+import PunchPage from './pages/PunchPage';
 
 function ProtectedRoute({ children }) {
   const { token, loading } = useAuth();
@@ -15,6 +16,7 @@ function ProtectedRoute({ children }) {
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/punch" element={<PunchPage />} />
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin" element={
         <ProtectedRoute>
