@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EmploymentType {
+  full_time
+  part_time
+}
+
+enum SalaryType {
+  monthly
+  hourly
+}
+
+enum TaxColumn {
+  kou
+  otsu
+}
+
+enum RecordType {
+  clock_in
+  clock_out
+  break_start
+  break_end
+}
+
+model Staff {
+  id                     String         @id @default(uuid())
+  name                   String
+  title                  String?
+  employmentType         EmploymentType @map("employment_type")
+  salaryType             SalaryType     @map("salary_type")
+  monthlySalary          Int?           @map("monthly_salary")
+  hourlyRate             Int?           @map("hourly_rate")
+  taxColumn              TaxColumn      @map("tax_column")
+  hasEmploymentInsurance Boolean        @default(false) @map("has_employment_insurance")
+  healthInsuranceAmount  Int            @default(0) @map("health_insurance_amount")
+  careInsuranceAmount    Int            @default(0) @map("care_insurance_amount")
+  pensionAmount          Int            @default(0) @map("pension_amount")
+  hasMealDeduction       Boolean        @default(false) @map("has_meal_deduction")
+  rentDeduction          Int            @default(0) @map("rent_deduction")
+  hasTransportAllowance  Boolean        @default(false) @map("has_transport_allowance")
+  employeeUrlToken       String         @unique @map("employee_url_token") @db.VarChar(64)
+  employeePasswordHash   String?        @map("employee_password_hash")
+  isActive               Boolean        @default(true) @map("is_active")
+  createdAt              DateTime       @default(now()) @map("created_at")
+  updatedAt              DateTime       @updatedAt @map("updated_at")
+
+  timeRecords       TimeRecord[]
+  monthlyExtraInputs MonthlyExtraInput[]
+  payrollRecords    PayrollRecord[]
+
+  @@map("staffs")
+}
+
+model TimeRecord {
+  id         String     @id @default(uuid())
+  staffId    String     @map("staff_id")
+  recordType RecordType @map("record_type")
+  recordedAt DateTime   @map("recorded_at")
+  isModified Boolean    @default(false) @map("is_modified")
+  modifiedBy String?    @map("modified_by")
+  modifiedAt DateTime?  @map("modified_at")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  staff Staff @relation(fields: [staffId], references: [id])
+
+  @@index([staffId, recordedAt])
+  @@map("time_records")
+}
+
+model MonthlyExtraInput {
+  id                 String @id @default(uuid())
+  staffId            String @map("staff_id")
+  yearMonth          String @map("year_month") @db.VarChar(7)
+  mealCount          Int    @default(0) @map("meal_count")
+  mealDeductionCount Int    @default(0) @map("meal_deduction_count")
+  notes              String? @db.Text
+
+  staff Staff @relation(fields: [staffId], references: [id])
+
+  @@unique([staffId, yearMonth])
+  @@map("monthly_extra_inputs")
+}
+
+model PayrollRecord {
+  id                  String   @id @default(uuid())
+  staffId             String   @map("staff_id")
+  yearMonth           String   @map("year_month") @db.VarChar(7)
+  workDays            Int      @map("work_days")
+  totalWorkMinutes    Int      @map("total_work_minutes")
+  normalWorkMinutes   Int      @map("normal_work_minutes")
+  overtimeMinutes     Int      @map("overtime_minutes")
+  nightWorkMinutes    Int      @map("night_work_minutes")
+  holidayWorkMinutes  Int      @map("holiday_work_minutes")
+  basePay             Int      @map("base_pay")
+  overtimePay         Int      @map("overtime_pay")
+  nightPay            Int      @map("night_pay")
+  holidayPay          Int      @map("holiday_pay")
+  transportAllowance  Int      @map("transport_allowance")
+  mealAllowance       Int      @map("meal_allowance")
+  grossPay            Int      @map("gross_pay")
+  incomeTax           Int      @map("income_tax")
+  healthInsurance     Int      @map("health_insurance")
+  careInsurance       Int      @map("care_insurance")
+  pension             Int      @map("pension")
+  employmentInsurance Int      @map("employment_insurance")
+  mealDeduction       Int      @map("meal_deduction")
+  rentDeduction       Int      @map("rent_deduction")
+  totalDeduction      Int      @map("total_deduction")
+  netPay              Int      @map("net_pay")
+  isBonus             Boolean  @default(false) @map("is_bonus")
+  calculatedAt        DateTime @default(now()) @map("calculated_at")
+
+  staff Staff @relation(fields: [staffId], references: [id])
+
+  @@unique([staffId, yearMonth, isBonus])
+  @@map("payroll_records")
+}
+
+model AdminSetting {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String
+
+  @@map("admin_settings")
+}
