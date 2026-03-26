@@ -237,4 +237,156 @@ router.patch('/staff/:id/deactivate', adminAuth, async (req, res) => {
   }
 });
 
+// --- 勤怠管理 ---
+
+// 月次勤怠一覧
+router.get('/attendance', adminAuth, async (req, res) => {
+  const { month, staff_id } = req.query;
+  if (!month) {
+    return res.status(400).json({ error: 'monthパラメータは必須です（例: 2026-03）' });
+  }
+
+  const [year, mon] = month.split('-').map(Number);
+  const jstOffset = 9 * 60 * 60 * 1000;
+  const start = new Date(new Date(year, mon - 1, 1).getTime() - jstOffset);
+  const end = new Date(new Date(year, mon, 1).getTime() - jstOffset);
+
+  const where = {
+    recordedAt: { gte: start, lt: end },
+  };
+  if (staff_id) {
+    where.staffId = staff_id;
+  }
+
+  const records = await prisma.timeRecord.findMany({
+    where,
+    include: { staff: { select: { id: true, name: true } } },
+    orderBy: { recordedAt: 'asc' },
+  });
+
+  // 日別・スタッフ別にグルーピング
+  const grouped = {};
+  for (const r of records) {
+    const jstDate = new Date(new Date(r.recordedAt).getTime() + jstOffset);
+    const dateKey = `${jstDate.getFullYear()}-${String(jstDate.getMonth() + 1).padStart(2, '0')}-${String(jstDate.getDate()).padStart(2, '0')}`;
+    const key = `${r.staffId}_${dateKey}`;
+    if (!grouped[key]) {
+      grouped[key] = {
+        staffId: r.staffId,
+        staffName: r.staff.name,
+        date: dateKey,
+        records: [],
+      };
+    }
+    grouped[key].records.push({
+      id: r.id,
+      recordType: r.recordType,
+      recordedAt: r.recordedAt,
+      isModified: r.isModified,
+      modifiedBy: r.modifiedBy,
+    });
+  }
+
+  // 各日の勤務サマリーを計算
+  const days = Object.values(grouped).map((day) => {
+    const sorted = [...day.records].sort((a, b) => new Date(a.recordedAt) - new Date(b.recordedAt));
+    let clockIn = null;
+    let clockOut = null;
+    let breakMinutes = 0;
+    let breakStart = null;
+
+    for (const r of sorted) {
+      switch (r.recordType) {
+        case 'clock_in':
+          if (!clockIn) clockIn = new Date(r.recordedAt);
+          break;
+        case 'clock_out':
+          clockOut = new Date(r.recordedAt);
+          break;
+        case 'break_start':
+          breakStart = new Date(r.recordedAt);
+          break;
+        case 'break_end':
+          if (breakStart) {
+            breakMinutes += (new Date(r.recordedAt) - breakStart) / 60000;
+            breakStart = null;
+          }
+          break;
+      }
+    }
+
+    let workMinutes = 0;
+    if (clockIn && clockOut) {
+      workMinutes = Math.max(0, (clockOut - clockIn) / 60000 - breakMinutes);
+    }
+
+    return {
+      ...day,
+      clockIn: clockIn?.toISOString() || null,
+      clockOut: clockOut?.toISOString() || null,
+      breakMinutes: Math.round(breakMinutes),
+      workMinutes: Math.round(workMinutes),
+    };
+  });
+
+  days.sort((a, b) => a.date.localeCompare(b.date) || a.staffName.localeCompare(b.staffName));
+
+  res.json(days);
+});
+
+// 打刻修正
+router.put('/attendance/:recordId', adminAuth, async (req, res) => {
+  const { recordId } = req.params;
+  const { recordedAt, recordType } = req.body;
+
+  try {
+    const data = {
+      isModified: true,
+      modifiedBy: '管理者',
+      modifiedAt: new Date(),
+    };
+    if (recordedAt) data.recordedAt = new Date(recordedAt);
+    if (recordType) data.recordType = recordType;
+
+    const record = await prisma.timeRecord.update({
+      where: { id: recordId },
+      data,
+    });
+    res.json(record);
+  } catch {
+    res.status(404).json({ error: '打刻記録が見つかりません' });
+  }
+});
+
+// 打刻追加（打刻忘れ対応）
+router.post('/attendance', adminAuth, async (req, res) => {
+  const { staffId, recordType, recordedAt } = req.body;
+
+  if (!staffId || !recordType || !recordedAt) {
+    return res.status(400).json({ error: 'staffId, recordType, recordedAtは必須です' });
+  }
+
+  const record = await prisma.timeRecord.create({
+    data: {
+      staffId,
+      recordType,
+      recordedAt: new Date(recordedAt),
+      isModified: true,
+      modifiedBy: '管理者',
+      modifiedAt: new Date(),
+    },
+  });
+  res.status(201).json(record);
+});
+
+// 打刻削除
+router.delete('/attendance/:recordId', adminAuth, async (req, res) => {
+  try {
+    await prisma.timeRecord.delete({ where: { id: req.params.recordId } });
+    res.json({ success: true });
+  } catch {
+    res.status(404).json({ error: '打刻記録が見つかりません' });
+  }
+});
+
 export default router;
