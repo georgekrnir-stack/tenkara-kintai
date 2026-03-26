@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
+import { LogIn, LogOut, Coffee, Play, X } from 'lucide-react';
 
 const statusColors = {
   not_working: 'bg-gray-100 text-gray-500',
@@ -16,10 +17,10 @@ const statusLabel = {
 };
 
 const buttons = [
-  { type: 'clock_in', label: '出勤', color: 'bg-green-500 hover:bg-green-600', allowedFrom: ['not_working', 'clocked_out'] },
-  { type: 'clock_out', label: '退勤', color: 'bg-red-500 hover:bg-red-600', allowedFrom: ['working'] },
-  { type: 'break_start', label: '休憩開始', color: 'bg-yellow-500 hover:bg-yellow-600', allowedFrom: ['working'] },
-  { type: 'break_end', label: '休憩終了', color: 'bg-blue-500 hover:bg-blue-600', allowedFrom: ['on_break'] },
+  { type: 'clock_in', label: '出勤', color: 'bg-green-500 hover:bg-green-600', allowedFrom: ['not_working', 'clocked_out'], icon: LogIn },
+  { type: 'clock_out', label: '退勤', color: 'bg-red-500 hover:bg-red-600', allowedFrom: ['working'], icon: LogOut },
+  { type: 'break_start', label: '休憩開始', color: 'bg-yellow-500 hover:bg-yellow-600', allowedFrom: ['working'], icon: Coffee },
+  { type: 'break_end', label: '休憩終了', color: 'bg-blue-500 hover:bg-blue-600', allowedFrom: ['on_break'], icon: Play },
 ];
 
 export default function PunchPage() {
@@ -90,16 +91,16 @@ export default function PunchPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen gradient-bg p-6">
       {/* 現在時刻 */}
       <div className="text-center mb-8">
-        <p className="text-6xl font-bold text-gray-800 tabular-nums">{timeStr}</p>
+        <p className="text-6xl font-bold gradient-text tabular-nums">{timeStr}</p>
         <p className="text-lg text-gray-500 mt-1">{dateStr}</p>
       </div>
 
       {/* フィードバック */}
       {feedback && (
-        <div className={`max-w-2xl mx-auto mb-6 p-4 rounded-lg text-center text-lg font-medium ${
+        <div className={`max-w-2xl mx-auto mb-6 p-4 rounded-xl text-center text-lg font-medium shadow-md ${
           feedback.type === 'success'
             ? 'bg-green-50 text-green-700 border border-green-200'
             : 'bg-red-50 text-red-700 border border-red-200'
@@ -110,26 +111,28 @@ export default function PunchPage() {
 
       {/* 打刻ボタン（スタッフ選択時） */}
       {selected && (
-        <div className="max-w-2xl mx-auto mb-8 bg-white rounded-lg shadow p-6">
+        <div className="max-w-2xl mx-auto mb-8 bg-white rounded-xl shadow-xl p-6 border border-gray-100">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold text-gray-800">{selected.name}</h2>
             <button onClick={() => setSelected(null)}
-              className="text-gray-400 hover:text-gray-600 text-sm">
-              閉じる
+              className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100">
+              <X size={20} />
             </button>
           </div>
           <div className="grid grid-cols-2 gap-4">
             {buttons.map((btn) => {
               const enabled = btn.allowedFrom.includes(selected.status);
+              const Icon = btn.icon;
               return (
                 <button
                   key={btn.type}
                   onClick={() => enabled && handlePunch(btn.type)}
                   disabled={!enabled || loading}
-                  className={`py-6 rounded-lg text-white text-2xl font-bold transition-colors ${
-                    enabled ? btn.color : 'bg-gray-300 cursor-not-allowed'
+                  className={`py-6 rounded-xl text-white text-2xl font-bold transition-all flex items-center justify-center gap-3 shadow-lg ${
+                    enabled ? `${btn.color} btn-hover` : 'bg-gray-300 cursor-not-allowed'
                   } disabled:opacity-50`}
                 >
+                  <Icon size={28} />
                   {btn.label}
                 </button>
               );
@@ -145,14 +148,19 @@ export default function PunchPage() {
             <button
               key={s.id}
               onClick={() => setSelected(s)}
-              className={`p-4 rounded-lg border-2 text-left transition-all ${
+              className={`p-4 rounded-xl border-2 text-left transition-all card-hover ${
                 selected?.id === s.id
-                  ? 'border-blue-500 shadow-md'
-                  : 'border-gray-200 hover:border-gray-300 hover:shadow'
+                  ? 'border-blue-500 shadow-lg bg-blue-50/50'
+                  : 'border-gray-200 hover:border-blue-300 hover:shadow-md'
               } bg-white`}
             >
               <p className="text-lg font-bold text-gray-800">{s.name}</p>
-              <span className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium ${statusColors[s.status]}`}>
+              <span className={`inline-flex items-center gap-1.5 mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[s.status]}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  s.status === 'working' ? 'bg-green-500' :
+                  s.status === 'on_break' ? 'bg-yellow-500' :
+                  s.status === 'clocked_out' ? 'bg-blue-500' : 'bg-gray-400'
+                }`} />
                 {statusLabel[s.status]}
               </span>
             </button>

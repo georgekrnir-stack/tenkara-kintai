@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
+import { Calculator, Settings, BarChart3, ArrowLeft, Save, Play } from 'lucide-react';
 
 function formatMinutes(min) {
   const h = Math.floor(min / 60);
@@ -78,55 +79,67 @@ export default function Payroll() {
     }
   };
 
+  const tabItems = [
+    { key: 'settings', label: '月次設定', icon: Settings },
+    { key: 'results', label: '計算結果', icon: BarChart3 },
+  ];
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">給与計算</h2>
         <input type="month" value={month} onChange={(e) => { setMonth(e.target.value); setTab('settings'); }}
-          className="border rounded px-3 py-1.5 text-sm" />
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
       </div>
 
       {/* タブ */}
       <div className="flex gap-1 mb-4">
-        {[
-          { key: 'settings', label: '月次設定' },
-          { key: 'results', label: '計算結果' },
-        ].map((t) => (
-          <button key={t.key} onClick={() => { setTab(t.key); setSelectedStaff(null); }}
-            className={`px-4 py-2 text-sm rounded-t ${
-              tab === t.key ? 'bg-white border-t border-x font-medium' : 'bg-gray-100 text-gray-500'
-            }`}>{t.label}</button>
-        ))}
+        {tabItems.map((t) => {
+          const Icon = t.icon;
+          return (
+            <button key={t.key} onClick={() => { setTab(t.key); setSelectedStaff(null); }}
+              className={`px-4 py-2 text-sm rounded-t-lg inline-flex items-center gap-2 transition-colors ${
+                tab === t.key
+                  ? 'bg-white border-t-2 border-x border-blue-500 font-medium text-blue-700 shadow-sm'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}>
+              <Icon size={14} />
+              {t.label}
+            </button>
+          );
+        })}
       </div>
 
       {tab === 'settings' && (
         <div className="space-y-4">
           {/* 所定労働日数 */}
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white rounded-xl shadow-lg p-4">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">月次設定</h3>
             <div className="flex items-end gap-4">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">所定労働日数</label>
                 <input type="number" value={monthlySettings.scheduledWorkDays}
                   onChange={(e) => setMonthlySettings({ ...monthlySettings, scheduledWorkDays: e.target.value })}
-                  className="border rounded px-3 py-1.5 text-sm w-24" />
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-24 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
               </div>
               <button onClick={saveMonthlySettings}
-                className="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">保存</button>
+                className="gradient-header text-white px-4 py-1.5 rounded-lg text-sm hover:opacity-90 btn-hover inline-flex items-center gap-1.5 shadow-md">
+                <Save size={14} />保存
+              </button>
             </div>
           </div>
 
           {/* 手動入力（食数等） */}
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white rounded-xl shadow-lg p-4">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">月次手動入力（食数等）</h3>
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
+              <thead className="gradient-table-header border-b">
                 <tr>
-                  <th className="text-left px-3 py-2 font-medium text-gray-600">スタッフ</th>
-                  <th className="text-center px-3 py-2 font-medium text-gray-600">まかない食数</th>
-                  <th className="text-center px-3 py-2 font-medium text-gray-600">食事代控除食数</th>
-                  <th className="text-center px-3 py-2 font-medium text-gray-600">備考</th>
-                  <th className="text-center px-3 py-2 font-medium text-gray-600">操作</th>
+                  <th className="text-left px-3 py-2 font-semibold text-gray-600">スタッフ</th>
+                  <th className="text-center px-3 py-2 font-semibold text-gray-600">まかない食数</th>
+                  <th className="text-center px-3 py-2 font-semibold text-gray-600">食事代控除食数</th>
+                  <th className="text-center px-3 py-2 font-semibold text-gray-600">備考</th>
+                  <th className="text-center px-3 py-2 font-semibold text-gray-600">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -143,7 +156,8 @@ export default function Payroll() {
           {/* 計算実行 */}
           <div className="text-center">
             <button onClick={calculate} disabled={calculating}
-              className="bg-green-600 text-white px-8 py-3 rounded-lg text-lg font-bold hover:bg-green-700 disabled:opacity-50">
+              className="bg-green-600 text-white px-8 py-3 rounded-xl text-lg font-bold hover:bg-green-700 disabled:opacity-50 btn-hover shadow-lg inline-flex items-center gap-2">
+              <Play size={20} />
               {calculating ? '計算中...' : '給与計算実行'}
             </button>
           </div>
@@ -151,21 +165,21 @@ export default function Payroll() {
       )}
 
       {tab === 'results' && !selectedStaff && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="gradient-table-header border-b">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">スタッフ</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">労働日数</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">支給総額</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">控除総額</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">差引支給額</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-600">操作</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">スタッフ</th>
+                <th className="text-right px-4 py-3 font-semibold text-gray-600">労働日数</th>
+                <th className="text-right px-4 py-3 font-semibold text-gray-600">支給総額</th>
+                <th className="text-right px-4 py-3 font-semibold text-gray-600">控除総額</th>
+                <th className="text-right px-4 py-3 font-semibold text-gray-600">差引支給額</th>
+                <th className="text-center px-4 py-3 font-semibold text-gray-600">操作</th>
               </tr>
             </thead>
             <tbody>
               {results.map((r) => (
-                <tr key={r.staffId} className="border-b hover:bg-gray-50">
+                <tr key={r.staffId} className="border-b hover:bg-blue-50/30 transition-colors even:bg-gray-50/50">
                   <td className="px-4 py-3 font-medium">{r.staffName}</td>
                   <td className="px-4 py-3 text-right">{r.workDays}日</td>
                   <td className="px-4 py-3 text-right">{formatYen(r.grossPay)}</td>
@@ -173,7 +187,9 @@ export default function Payroll() {
                   <td className="px-4 py-3 text-right font-bold text-lg">{formatYen(r.netPay)}</td>
                   <td className="px-4 py-3 text-center">
                     <button onClick={() => setSelectedStaff(r)}
-                      className="text-blue-600 hover:underline text-xs">明細</button>
+                      className="text-blue-600 hover:text-blue-800 text-xs transition-colors inline-flex items-center gap-1">
+                      <BarChart3 size={12} />明細
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -204,23 +220,25 @@ function ExtraInputRow({ staff, extra, onSave }) {
   }, [extra]);
 
   return (
-    <tr className="border-b">
+    <tr className="border-b even:bg-gray-50/50">
       <td className="px-3 py-2">{staff.name}</td>
       <td className="px-3 py-2 text-center">
         <input type="number" value={mealCount} onChange={(e) => setMealCount(parseInt(e.target.value) || 0)}
-          className="border rounded px-2 py-1 w-16 text-center text-sm" />
+          className="border rounded-lg px-2 py-1 w-16 text-center text-sm" />
       </td>
       <td className="px-3 py-2 text-center">
         <input type="number" value={mealDeductionCount} onChange={(e) => setMealDeductionCount(parseInt(e.target.value) || 0)}
-          className="border rounded px-2 py-1 w-16 text-center text-sm" />
+          className="border rounded-lg px-2 py-1 w-16 text-center text-sm" />
       </td>
       <td className="px-3 py-2 text-center">
         <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)}
-          className="border rounded px-2 py-1 w-32 text-sm" />
+          className="border rounded-lg px-2 py-1 w-32 text-sm" />
       </td>
       <td className="px-3 py-2 text-center">
         <button onClick={() => onSave({ mealCount, mealDeductionCount, notes })}
-          className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">保存</button>
+          className="gradient-header text-white px-3 py-1 rounded-lg text-xs hover:opacity-90 btn-hover inline-flex items-center gap-1">
+          <Save size={11} />保存
+        </button>
       </td>
     </tr>
   );
@@ -234,20 +252,23 @@ function PayrollDetail({ data, month, onBack }) {
 
   return (
     <div>
-      <button onClick={onBack} className="text-blue-600 hover:underline text-sm mb-4">&larr; 一覧に戻る</button>
+      <button onClick={onBack} className="text-blue-600 hover:text-blue-800 text-sm mb-4 inline-flex items-center gap-1 transition-colors">
+        <ArrowLeft size={14} /> 一覧に戻る
+      </button>
 
-      <div className="bg-white rounded-lg shadow p-6 max-w-lg mx-auto">
-        <div className="text-center mb-4">
-          <p className="text-sm text-gray-500">飛騨牛食べ処てんから</p>
-          <h3 className="text-lg font-bold">給与支払明細書</h3>
-          <p className="text-sm text-gray-600">{warekiMonth}</p>
-          <p className="text-base font-medium mt-1">{data.staffName} 殿</p>
+      <div className="bg-white rounded-xl shadow-xl p-6 max-w-lg mx-auto border border-gray-100">
+        {/* ヘッダー帯 */}
+        <div className="gradient-header -mx-6 -mt-6 px-6 py-4 rounded-t-xl mb-4">
+          <p className="text-sm text-blue-100">飛騨牛食べ処てんから</p>
+          <h3 className="text-lg font-bold text-white">給与支払明細書</h3>
+          <p className="text-sm text-blue-100">{warekiMonth}</p>
         </div>
+        <p className="text-base font-medium text-center mb-4">{data.staffName} 殿</p>
 
         <div className="space-y-4 text-sm">
           {/* 勤怠 */}
           <section>
-            <h4 className="font-semibold border-b pb-1 mb-2">勤怠</h4>
+            <h4 className="font-semibold border-b-2 border-gray-200 pb-1 mb-2 text-gray-700">勤怠</h4>
             <div className="grid grid-cols-2 gap-1">
               <span className="text-gray-600">労働日数:</span><span className="text-right">{data.workDays}日</span>
               <span className="text-gray-600">労働時間:</span><span className="text-right">{formatMinutes(data.totalWorkMinutes)}</span>
@@ -259,7 +280,7 @@ function PayrollDetail({ data, month, onBack }) {
 
           {/* 支給 */}
           <section>
-            <h4 className="font-semibold border-b pb-1 mb-2">支給</h4>
+            <h4 className="font-semibold border-b-2 border-gray-200 pb-1 mb-2 text-gray-700">支給</h4>
             <div className="grid grid-cols-2 gap-1">
               <span className="text-gray-600">基本給:</span><span className="text-right">{formatYen(data.basePay)}</span>
               {data.overtimePay > 0 && <><span className="text-gray-600">残業手当:</span><span className="text-right">{formatYen(data.overtimePay)}</span></>}
@@ -275,7 +296,7 @@ function PayrollDetail({ data, month, onBack }) {
 
           {/* 控除 */}
           <section>
-            <h4 className="font-semibold border-b pb-1 mb-2">控除</h4>
+            <h4 className="font-semibold border-b-2 border-gray-200 pb-1 mb-2 text-gray-700">控除</h4>
             <div className="grid grid-cols-2 gap-1">
               {data.incomeTax > 0 && <><span className="text-gray-600">所得税:</span><span className="text-right">{formatYen(data.incomeTax)}</span></>}
               {data.healthInsurance > 0 && <><span className="text-gray-600">健康保険料:</span><span className="text-right">{formatYen(data.healthInsurance)}</span></>}
@@ -293,16 +314,16 @@ function PayrollDetail({ data, month, onBack }) {
           {/* 差引支給額 */}
           <div className="border-t-2 border-gray-800 pt-3 text-center">
             <p className="text-sm text-gray-600">差引支給額</p>
-            <p className="text-5xl font-bold text-gray-800 my-2">{formatYen(data.netPay)}</p>
+            <p className="text-5xl font-bold gradient-text my-2">{formatYen(data.netPay)}</p>
           </div>
 
           {/* 紙幣・硬貨内訳 */}
           {data.cashBreakdown && data.cashBreakdown.length > 0 && (
-            <div className="bg-gray-50 rounded p-3">
+            <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
               <p className="text-xs font-semibold text-gray-600 mb-2">紙幣・硬貨内訳:</p>
               <div className="flex flex-wrap gap-2">
                 {data.cashBreakdown.map((cb) => (
-                  <span key={cb.denomination} className="bg-white border rounded px-2 py-1 text-xs">
+                  <span key={cb.denomination} className="bg-white border border-gray-200 rounded-lg px-2.5 py-1 text-xs shadow-sm">
                     {denomLabels[cb.denomination]}: {cb.count}枚
                   </span>
                 ))}

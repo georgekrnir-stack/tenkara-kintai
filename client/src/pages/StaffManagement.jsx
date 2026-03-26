@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
 import StaffForm from '../components/StaffForm';
+import { Plus, Pencil, Link2, UserMinus } from 'lucide-react';
 
 const employmentTypeLabel = { full_time: '正社員', part_time: 'パート' };
 const salaryTypeLabel = { monthly: '月給制', hourly: '時給制' };
@@ -60,7 +61,7 @@ export default function StaffManagement() {
     return (
       <div>
         <h2 className="text-2xl font-bold text-gray-800 mb-4">スタッフ新規登録</h2>
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-xl shadow-lg p-6">
           <StaffForm onSubmit={handleCreate} onCancel={() => setMode('list')} />
         </div>
       </div>
@@ -71,7 +72,7 @@ export default function StaffManagement() {
     return (
       <div>
         <h2 className="text-2xl font-bold text-gray-800 mb-4">スタッフ編集: {editTarget.name}</h2>
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-xl shadow-lg p-6">
           <StaffForm staff={editTarget} onSubmit={handleUpdate}
             onCancel={() => { setMode('list'); setEditTarget(null); }} />
         </div>
@@ -81,36 +82,37 @@ export default function StaffManagement() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">スタッフ管理</h2>
         <button onClick={() => setMode('create')}
-          className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+          className="gradient-header text-white px-4 py-2 rounded-lg text-sm hover:opacity-90 btn-hover flex items-center gap-2 shadow-md">
+          <Plus size={16} />
           新規登録
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">{error}</div>
+        <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm border border-red-200">{error}</div>
       )}
 
       {loading ? (
         <p className="text-gray-500">読み込み中...</p>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="gradient-table-header border-b">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">氏名</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">雇用形態</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">給与形態</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">時給/基本給</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-600">状態</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-600">操作</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">氏名</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">雇用形態</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">給与形態</th>
+                <th className="text-right px-4 py-3 font-semibold text-gray-600">時給/基本給</th>
+                <th className="text-center px-4 py-3 font-semibold text-gray-600">状態</th>
+                <th className="text-center px-4 py-3 font-semibold text-gray-600">操作</th>
               </tr>
             </thead>
             <tbody>
               {staffs.map((s) => (
-                <tr key={s.id} className="border-b hover:bg-gray-50">
+                <tr key={s.id} className="border-b hover:bg-blue-50/30 transition-colors even:bg-gray-50/50">
                   <td className="px-4 py-3">
                     {s.name}
                     {s.title && <span className="text-gray-400 ml-1 text-xs">({s.title})</span>}
@@ -123,25 +125,32 @@ export default function StaffManagement() {
                       : `¥${(s.hourlyRate || 0).toLocaleString()}/時`}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`inline-block px-2 py-0.5 rounded text-xs ${
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       s.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                     }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${s.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
                       {s.isActive ? '有効' : '無効'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center whitespace-nowrap">
                     <button onClick={() => { setEditTarget(s); setMode('edit'); }}
-                      className="text-blue-600 hover:underline text-xs mr-3">編集</button>
+                      className="text-blue-600 hover:text-blue-800 text-xs mr-2 inline-flex items-center gap-1 transition-colors">
+                      <Pencil size={12} />編集
+                    </button>
                     {s.employeeUrlToken && (
                       <button onClick={() => {
                         navigator.clipboard.writeText(`${window.location.origin}/employee/${s.employeeUrlToken}`);
                         alert(`${s.name}さんの従業員ページURLをコピーしました`);
                       }}
-                        className="text-green-600 hover:underline text-xs mr-3">URL共有</button>
+                        className="text-green-600 hover:text-green-800 text-xs mr-2 inline-flex items-center gap-1 transition-colors">
+                        <Link2 size={12} />URL共有
+                      </button>
                     )}
                     {s.isActive && (
                       <button onClick={() => handleDeactivate(s.id)}
-                        className="text-red-600 hover:underline text-xs">無効化</button>
+                        className="text-red-600 hover:text-red-800 text-xs inline-flex items-center gap-1 transition-colors">
+                        <UserMinus size={12} />無効化
+                      </button>
                     )}
                   </td>
                 </tr>

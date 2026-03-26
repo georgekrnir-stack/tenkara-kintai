@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { User, Briefcase, Shield, HandCoins, KeyRound, Copy } from 'lucide-react';
 
 const defaultValues = {
   name: '',
@@ -16,6 +17,16 @@ const defaultValues = {
   rentDeduction: 0,
   hasTransportAllowance: false,
   employeePassword: '',
+};
+
+const sectionHeader = (icon, label) => {
+  const Icon = icon;
+  return (
+    <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b-2 border-gray-200 pb-2 flex items-center gap-2">
+      <Icon size={16} className="text-blue-600" />
+      {label}
+    </h3>
+  );
 };
 
 export default function StaffForm({ staff, onSubmit, onCancel }) {
@@ -54,24 +65,24 @@ export default function StaffForm({ staff, onSubmit, onCancel }) {
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* 基本情報 */}
       <section>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b pb-1">基本情報</h3>
+        {sectionHeader(User, '基本情報')}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-gray-600 mb-1">氏名 *</label>
             <input type="text" value={form.name} onChange={(e) => set('name', e.target.value)}
-              className="w-full border rounded px-3 py-2 text-sm" required />
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
           </div>
           <div>
             <label className="block text-sm text-gray-600 mb-1">肩書</label>
             <input type="text" value={form.title} onChange={(e) => set('title', e.target.value)}
-              className="w-full border rounded px-3 py-2 text-sm" placeholder="任意" />
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="任意" />
           </div>
         </div>
       </section>
 
       {/* 雇用・給与 */}
       <section>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b pb-1">雇用・給与</h3>
+        {sectionHeader(Briefcase, '雇用・給与')}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-gray-600 mb-1">雇用形態</label>
@@ -109,7 +120,7 @@ export default function StaffForm({ staff, onSubmit, onCancel }) {
             <div>
               <label className="block text-sm text-gray-600 mb-1">基本給（月額・円）</label>
               <input type="number" value={form.monthlySalary} onChange={(e) => set('monthlySalary', e.target.value)}
-                className="w-full border rounded px-3 py-2 text-sm" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
             </div>
           )}
           <div>
@@ -117,14 +128,14 @@ export default function StaffForm({ staff, onSubmit, onCancel }) {
               {form.salaryType === 'monthly' ? '時給（残業計算用・円）' : '時給（円）'}
             </label>
             <input type="number" value={form.hourlyRate} onChange={(e) => set('hourlyRate', e.target.value)}
-              className="w-full border rounded px-3 py-2 text-sm" />
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
           </div>
         </div>
       </section>
 
       {/* 税・保険 */}
       <section>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b pb-1">税・保険</h3>
+        {sectionHeader(Shield, '税・保険')}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-gray-600 mb-1">税区分</label>
@@ -154,26 +165,26 @@ export default function StaffForm({ staff, onSubmit, onCancel }) {
             <label className="block text-sm text-gray-600 mb-1">健康保険料（月額・円）</label>
             <input type="number" value={form.healthInsuranceAmount}
               onChange={(e) => set('healthInsuranceAmount', parseInt(e.target.value) || 0)}
-              className="w-full border rounded px-3 py-2 text-sm" />
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-sm text-gray-600 mb-1">介護保険料（月額・円）</label>
             <input type="number" value={form.careInsuranceAmount}
               onChange={(e) => set('careInsuranceAmount', parseInt(e.target.value) || 0)}
-              className="w-full border rounded px-3 py-2 text-sm" />
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
           </div>
           <div>
             <label className="block text-sm text-gray-600 mb-1">厚生年金（月額・円）</label>
             <input type="number" value={form.pensionAmount}
               onChange={(e) => set('pensionAmount', parseInt(e.target.value) || 0)}
-              className="w-full border rounded px-3 py-2 text-sm" />
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
           </div>
         </div>
       </section>
 
       {/* 控除・手当 */}
       <section>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b pb-1">控除・手当</h3>
+        {sectionHeader(HandCoins, '控除・手当')}
         <div className="grid grid-cols-3 gap-4">
           <label className="flex items-center gap-2 text-sm text-gray-600">
             <input type="checkbox" checked={form.hasMealDeduction}
@@ -190,26 +201,26 @@ export default function StaffForm({ staff, onSubmit, onCancel }) {
           <label className="block text-sm text-gray-600 mb-1">家賃控除（月額・円、0で控除なし）</label>
           <input type="number" value={form.rentDeduction}
             onChange={(e) => set('rentDeduction', parseInt(e.target.value) || 0)}
-            className="w-full max-w-xs border rounded px-3 py-2 text-sm" />
+            className="w-full max-w-xs border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
         </div>
       </section>
 
       {/* 従業員ページ */}
       <section>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3 border-b pb-1">従業員ページ</h3>
+        {sectionHeader(KeyRound, '従業員ページ')}
         {staff?.employeeUrlToken && (
           <div className="mb-3">
             <label className="block text-sm text-gray-600 mb-1">従業員ページURL</label>
             <div className="flex items-center gap-2">
               <input type="text" readOnly
                 value={`${window.location.origin}/employee/${staff.employeeUrlToken}`}
-                className="w-full border rounded px-3 py-2 text-sm bg-gray-50 text-gray-700" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-700" />
               <button type="button"
                 onClick={() => {
                   navigator.clipboard.writeText(`${window.location.origin}/employee/${staff.employeeUrlToken}`);
                 }}
-                className="shrink-0 bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm hover:bg-gray-300">
-                コピー
+                className="shrink-0 bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm hover:bg-gray-300 transition-colors inline-flex items-center gap-1">
+                <Copy size={14} />コピー
               </button>
             </div>
             <p className="text-xs text-gray-400 mt-1">このURLをスタッフに共有してください</p>
@@ -221,18 +232,18 @@ export default function StaffForm({ staff, onSubmit, onCancel }) {
           </label>
           <input type="password" value={form.employeePassword}
             onChange={(e) => set('employeePassword', e.target.value)}
-            className="w-full max-w-xs border rounded px-3 py-2 text-sm" />
+            className="w-full max-w-xs border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
         </div>
       </section>
 
       {/* ボタン */}
       <div className="flex gap-3 pt-2">
         <button type="submit"
-          className="bg-blue-600 text-white px-6 py-2 rounded text-sm hover:bg-blue-700">
+          className="gradient-header text-white px-6 py-2 rounded-lg text-sm hover:opacity-90 btn-hover shadow-md">
           {staff ? '更新' : '登録'}
         </button>
         <button type="button" onClick={onCancel}
-          className="bg-gray-200 text-gray-700 px-6 py-2 rounded text-sm hover:bg-gray-300">
+          className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg text-sm hover:bg-gray-300 transition-colors">
           キャンセル
         </button>
       </div>

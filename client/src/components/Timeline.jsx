@@ -53,8 +53,6 @@ export default function Timeline({ staffs, showCurrentTime = false }) {
         {staffs.map((s) => (
           <StaffRow key={s.id} staff={s} currentMinutes={currentMinutes} />
         ))}
-
-        {/* 深夜帯背景 & 現在時刻ラインは各行に統合 */}
       </div>
     </div>
   );
@@ -117,14 +115,14 @@ function StaffRow({ staff, currentMinutes }) {
   const nightEnd = 100;
 
   return (
-    <div className="flex items-center mb-1">
+    <div className="flex items-center mb-1.5">
       <div className="w-20 text-xs text-gray-600 font-medium truncate pr-2 text-right">
         {staff.name}
       </div>
-      <div className="flex-1 relative h-6 bg-gray-50 rounded border border-gray-100">
+      <div className="flex-1 relative h-7 bg-gray-50 rounded-lg border border-gray-200 shadow-sm">
         {/* 深夜帯背景 */}
         <div
-          className="absolute top-0 bottom-0 bg-purple-50 opacity-60"
+          className="absolute top-0 bottom-0 bg-purple-50 opacity-60 rounded-r-lg"
           style={{ left: `${nightStart}%`, right: `${100 - nightEnd}%` }}
         />
 
@@ -132,8 +130,8 @@ function StaffRow({ staff, currentMinutes }) {
         {segments.map((seg, i) => (
           <div
             key={i}
-            className={`absolute top-0.5 bottom-0.5 rounded-sm ${
-              seg.type === 'work' ? 'bg-blue-400' : 'bg-gray-300'
+            className={`absolute top-1 bottom-1 rounded ${
+              seg.type === 'work' ? 'bg-blue-400 shadow-sm' : 'bg-gray-300'
             }`}
             style={{
               left: `${getPercent(seg.start)}%`,

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import Timeline from '../components/Timeline';
+import { ChevronDown, ChevronUp, Plus, Pencil, Trash2, Save, X } from 'lucide-react';
 
 const recordTypeLabel = {
   clock_in: '出勤',
@@ -102,19 +103,19 @@ export default function Attendance() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">勤怠管理</h2>
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">勤怠管理</h2>
 
       {/* フィルタ */}
       <div className="flex gap-4 mb-4 items-end">
         <div>
           <label className="block text-xs text-gray-500 mb-1">年月</label>
           <input type="month" value={month} onChange={(e) => setMonth(e.target.value)}
-            className="border rounded px-3 py-1.5 text-sm" />
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
         </div>
         <div>
           <label className="block text-xs text-gray-500 mb-1">スタッフ</label>
           <select value={staffId} onChange={(e) => setStaffId(e.target.value)}
-            className="border rounded px-3 py-1.5 text-sm">
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
             <option value="">全員</option>
             {staffList.filter((s) => s.isActive).map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
@@ -125,7 +126,7 @@ export default function Attendance() {
 
       {/* タイムライン（個人選択時） */}
       {staffId && timelineStaffs.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-4 mb-4">
+        <div className="bg-white rounded-xl shadow-lg p-4 mb-4 card-hover">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">月間タイムライン</h3>
           <Timeline staffs={timelineStaffs} showCurrentTime={false} />
         </div>
@@ -135,17 +136,17 @@ export default function Attendance() {
       {loading ? (
         <p className="text-gray-500">読み込み中...</p>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="gradient-table-header border-b">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">日付</th>
-                {!staffId && <th className="text-left px-4 py-3 font-medium text-gray-600">スタッフ</th>}
-                <th className="text-center px-4 py-3 font-medium text-gray-600">出勤</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-600">退勤</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-600">休憩</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-600">実労働</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-600">操作</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">日付</th>
+                {!staffId && <th className="text-left px-4 py-3 font-semibold text-gray-600">スタッフ</th>}
+                <th className="text-center px-4 py-3 font-semibold text-gray-600">出勤</th>
+                <th className="text-center px-4 py-3 font-semibold text-gray-600">退勤</th>
+                <th className="text-center px-4 py-3 font-semibold text-gray-600">休憩</th>
+                <th className="text-center px-4 py-3 font-semibold text-gray-600">実労働</th>
+                <th className="text-center px-4 py-3 font-semibold text-gray-600">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -191,10 +192,10 @@ function DayRow({ day, showStaff, isExpanded, onToggle, onEditRecord, onDeleteRe
 
   return (
     <>
-      <tr className="border-b hover:bg-gray-50 cursor-pointer" onClick={onToggle}>
+      <tr className="border-b hover:bg-blue-50/30 transition-colors cursor-pointer even:bg-gray-50/50" onClick={onToggle}>
         <td className="px-4 py-3">
           {day.date}
-          {hasModified && <span className="ml-1 text-orange-500 text-xs">*修正あり</span>}
+          {hasModified && <span className="ml-1 text-orange-500 text-xs font-medium">*修正あり</span>}
         </td>
         {showStaff && <td className="px-4 py-3">{day.staffName}</td>}
         <td className="px-4 py-3 text-center">{formatTime(day.clockIn)}</td>
@@ -203,15 +204,15 @@ function DayRow({ day, showStaff, isExpanded, onToggle, onEditRecord, onDeleteRe
         <td className="px-4 py-3 text-center font-medium">{day.workMinutes > 0 ? formatMinutes(day.workMinutes) : '-'}</td>
         <td className="px-4 py-3 text-center">
           <button onClick={(e) => { e.stopPropagation(); onToggle(); }}
-            className="text-blue-600 hover:underline text-xs">
-            {isExpanded ? '閉じる' : '詳細'}
+            className="text-blue-600 hover:text-blue-800 text-xs inline-flex items-center gap-1 transition-colors">
+            {isExpanded ? <><ChevronUp size={14} />閉じる</> : <><ChevronDown size={14} />詳細</>}
           </button>
         </td>
       </tr>
 
       {/* 展開: 打刻詳細 */}
       {isExpanded && (
-        <tr className="bg-gray-50">
+        <tr className="bg-blue-50/20">
           <td colSpan={showStaff ? 7 : 6} className="px-6 py-3">
             <div className="space-y-2">
               <p className="text-xs font-semibold text-gray-600">打刻記録:</p>
@@ -241,9 +242,9 @@ function DayRow({ day, showStaff, isExpanded, onToggle, onEditRecord, onDeleteRe
               ) : (
                 <button
                   onClick={() => setAddingDay(dayKey)}
-                  className="text-blue-600 hover:underline text-xs mt-1"
+                  className="text-blue-600 hover:text-blue-800 text-xs mt-1 inline-flex items-center gap-1 transition-colors"
                 >
-                  + 打刻を追加
+                  <Plus size={12} /> 打刻を追加
                 </button>
               )}
             </div>
@@ -267,18 +268,22 @@ function RecordRow({ record, isEditing, onEdit, onSave, onCancel, onDelete }) {
 
   if (isEditing) {
     return (
-      <div className="flex items-center gap-2 text-xs bg-white p-2 rounded border">
+      <div className="flex items-center gap-2 text-xs bg-white p-2.5 rounded-lg border border-blue-200 shadow-sm">
         <select value={editType} onChange={(e) => setEditType(e.target.value)}
-          className="border rounded px-2 py-1">
+          className="border rounded-lg px-2 py-1">
           {Object.entries(recordTypeLabel).map(([v, l]) => (
             <option key={v} value={v}>{l}</option>
           ))}
         </select>
         <input type="datetime-local" value={editTime} onChange={(e) => setEditTime(e.target.value)}
-          className="border rounded px-2 py-1" />
+          className="border rounded-lg px-2 py-1" />
         <button onClick={() => onSave({ recordType: editType, recordedAt: editTime })}
-          className="bg-blue-600 text-white px-2 py-1 rounded">保存</button>
-        <button onClick={onCancel} className="text-gray-500 px-2 py-1">キャンセル</button>
+          className="gradient-header text-white px-2.5 py-1 rounded-lg inline-flex items-center gap-1">
+          <Save size={12} />保存
+        </button>
+        <button onClick={onCancel} className="text-gray-500 px-2 py-1 hover:text-gray-700 inline-flex items-center gap-1">
+          <X size={12} />キャンセル
+        </button>
       </div>
     );
   }
@@ -287,9 +292,13 @@ function RecordRow({ record, isEditing, onEdit, onSave, onCancel, onDelete }) {
     <div className="flex items-center gap-3 text-xs">
       <span className="w-16 font-medium">{recordTypeLabel[record.recordType]}</span>
       <span>{formatTime(record.recordedAt)}</span>
-      {record.isModified && <span className="text-orange-500">(修正済み)</span>}
-      <button onClick={onEdit} className="text-blue-600 hover:underline ml-auto">編集</button>
-      <button onClick={onDelete} className="text-red-600 hover:underline">削除</button>
+      {record.isModified && <span className="text-orange-500 font-medium">(修正済み)</span>}
+      <button onClick={onEdit} className="text-blue-600 hover:text-blue-800 ml-auto inline-flex items-center gap-1 transition-colors">
+        <Pencil size={11} />編集
+      </button>
+      <button onClick={onDelete} className="text-red-600 hover:text-red-800 inline-flex items-center gap-1 transition-colors">
+        <Trash2 size={11} />削除
+      </button>
     </div>
   );
 }
@@ -299,18 +308,22 @@ function AddRecordForm({ staffId, date, onSubmit, onCancel }) {
   const [time, setTime] = useState(`${date}T09:00`);
 
   return (
-    <div className="flex items-center gap-2 text-xs bg-white p-2 rounded border">
+    <div className="flex items-center gap-2 text-xs bg-white p-2.5 rounded-lg border border-blue-200 shadow-sm">
       <select value={recordType} onChange={(e) => setRecordType(e.target.value)}
-        className="border rounded px-2 py-1">
+        className="border rounded-lg px-2 py-1">
         {Object.entries(recordTypeLabel).map(([v, l]) => (
           <option key={v} value={v}>{l}</option>
         ))}
       </select>
       <input type="datetime-local" value={time} onChange={(e) => setTime(e.target.value)}
-        className="border rounded px-2 py-1" />
+        className="border rounded-lg px-2 py-1" />
       <button onClick={() => onSubmit({ staffId, recordType, recordedAt: time })}
-        className="bg-blue-600 text-white px-2 py-1 rounded">追加</button>
-      <button onClick={onCancel} className="text-gray-500 px-2 py-1">キャンセル</button>
+        className="gradient-header text-white px-2.5 py-1 rounded-lg inline-flex items-center gap-1">
+        <Plus size={12} />追加
+      </button>
+      <button onClick={onCancel} className="text-gray-500 px-2 py-1 hover:text-gray-700 inline-flex items-center gap-1">
+        <X size={12} />キャンセル
+      </button>
     </div>
   );
 }

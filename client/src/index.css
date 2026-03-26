@@ -1,1 +1,34 @@
 @import "tailwindcss";
+
+@layer utilities {
+  .gradient-header {
+    background: linear-gradient(135deg, #2563eb 0%, #4338ca 100%);
+  }
+  .gradient-bg {
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8ecf4 100%);
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, #1e40af 0%, #4338ca 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .gradient-table-header {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  }
+  .card-hover {
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .card-hover:hover {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  }
+  .btn-hover {
+    transition: all 0.15s ease;
+  }
+  .btn-hover:hover {
+    transform: translateY(-1px);
+  }
+  .btn-hover:active {
+    transform: translateY(0);
+  }
+}
