@@ -70,7 +70,7 @@ router.post('/staff', adminAuth, async (req, res) => {
   const {
     name, title, employmentType, salaryType, monthlySalary, hourlyRate,
     taxColumn, hasEmploymentInsurance, healthInsuranceAmount, careInsuranceAmount,
-    pensionAmount, hasMealDeduction, rentDeduction, hasTransportAllowance,
+    pensionAmount, rentDeduction, hasTransportAllowance, transportAllowanceDaily,
     employeePassword,
   } = req.body;
 
@@ -97,9 +97,10 @@ router.post('/staff', adminAuth, async (req, res) => {
       healthInsuranceAmount: parseInt(healthInsuranceAmount) || 0,
       careInsuranceAmount: parseInt(careInsuranceAmount) || 0,
       pensionAmount: parseInt(pensionAmount) || 0,
-      hasMealDeduction: !!hasMealDeduction,
+      hasMealDeduction: true,
       rentDeduction: parseInt(rentDeduction) || 0,
       hasTransportAllowance: !!hasTransportAllowance,
+      transportAllowanceDaily: transportAllowanceDaily ? parseInt(transportAllowanceDaily) : null,
       employeeUrlToken,
       employeePasswordHash,
     },
@@ -114,7 +115,7 @@ router.put('/staff/:id', adminAuth, async (req, res) => {
   const {
     name, title, employmentType, salaryType, monthlySalary, hourlyRate,
     taxColumn, hasEmploymentInsurance, healthInsuranceAmount, careInsuranceAmount,
-    pensionAmount, hasMealDeduction, rentDeduction, hasTransportAllowance,
+    pensionAmount, rentDeduction, hasTransportAllowance, transportAllowanceDaily,
     employeePassword,
   } = req.body;
 
@@ -130,9 +131,9 @@ router.put('/staff/:id', adminAuth, async (req, res) => {
     healthInsuranceAmount: parseInt(healthInsuranceAmount) || 0,
     careInsuranceAmount: parseInt(careInsuranceAmount) || 0,
     pensionAmount: parseInt(pensionAmount) || 0,
-    hasMealDeduction: !!hasMealDeduction,
     rentDeduction: parseInt(rentDeduction) || 0,
     hasTransportAllowance: !!hasTransportAllowance,
+    transportAllowanceDaily: transportAllowanceDaily ? parseInt(transportAllowanceDaily) : null,
   };
 
   if (employeePassword) {
@@ -248,8 +249,8 @@ router.get('/attendance', adminAuth, async (req, res) => {
 
   const [year, mon] = month.split('-').map(Number);
   const jstOffset = 9 * 60 * 60 * 1000;
-  const start = new Date(new Date(year, mon - 1, 1).getTime() - jstOffset);
-  const end = new Date(new Date(year, mon, 1).getTime() - jstOffset);
+  const start = new Date(Date.UTC(year, mon - 1, 1) - jstOffset);
+  const end = new Date(Date.UTC(year, mon, 1) - jstOffset);
 
   const where = {
     recordedAt: { gte: start, lt: end },
@@ -282,6 +283,7 @@ router.get('/attendance', adminAuth, async (req, res) => {
       id: r.id,
       recordType: r.recordType,
       recordedAt: r.recordedAt,
+      mealCount: r.mealCount,
       isModified: r.isModified,
       modifiedBy: r.modifiedBy,
     });
@@ -337,7 +339,7 @@ router.get('/attendance', adminAuth, async (req, res) => {
 // 打刻修正
 router.put('/attendance/:recordId', adminAuth, async (req, res) => {
   const { recordId } = req.params;
-  const { recordedAt, recordType } = req.body;
+  const { recordedAt, recordType, mealCount } = req.body;
 
   try {
     const data = {
@@ -347,6 +349,7 @@ router.put('/attendance/:recordId', adminAuth, async (req, res) => {
     };
     if (recordedAt) data.recordedAt = new Date(recordedAt);
     if (recordType) data.recordType = recordType;
+    if (mealCount !== undefined) data.mealCount = parseInt(mealCount) || 0;
 
     const record = await prisma.timeRecord.update({
       where: { id: recordId },
@@ -360,7 +363,7 @@ router.put('/attendance/:recordId', adminAuth, async (req, res) => {
 
 // 打刻追加（打刻忘れ対応）
 router.post('/attendance', adminAuth, async (req, res) => {
-  const { staffId, recordType, recordedAt } = req.body;
+  const { staffId, recordType, recordedAt, mealCount } = req.body;
 
   if (!staffId || !recordType || !recordedAt) {
     return res.status(400).json({ error: 'staffId, recordType, recordedAtは必須です' });
@@ -371,6 +374,7 @@ router.post('/attendance', adminAuth, async (req, res) => {
       staffId,
       recordType,
       recordedAt: new Date(recordedAt),
+      mealCount: parseInt(mealCount) || 0,
       isModified: true,
       modifiedBy: '管理者',
       modifiedAt: new Date(),
@@ -441,25 +445,78 @@ router.get('/monthly-extra', adminAuth, async (req, res) => {
 
 // 月次手動入力更新（upsert）
 router.put('/monthly-extra', adminAuth, async (req, res) => {
-  const { staffId, yearMonth, mealCount, mealDeductionCount, notes } = req.body;
+  const { staffId, yearMonth, notes } = req.body;
   if (!staffId || !yearMonth) return res.status(400).json({ error: 'staffIdとyearMonthは必須です' });
 
   const input = await prisma.monthlyExtraInput.upsert({
     where: { staffId_yearMonth: { staffId, yearMonth } },
     update: {
-      mealCount: parseInt(mealCount) || 0,
-      mealDeductionCount: parseInt(mealDeductionCount) || 0,
       notes: notes || null,
     },
     create: {
       staffId,
       yearMonth,
-      mealCount: parseInt(mealCount) || 0,
-      mealDeductionCount: parseInt(mealDeductionCount) || 0,
       notes: notes || null,
     },
   });
   res.json(input);
+});
+
+// --- 特別時給 ---
+
+// 特別時給一覧
+router.get('/special-rates', adminAuth, async (req, res) => {
+  const rates = await prisma.specialRate.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json(rates);
+});
+
+// 特別時給作成
+router.post('/special-rates', adminAuth, async (req, res) => {
+  const { name, startDate, endDate, amountIncrease } = req.body;
+  if (!name || !startDate || !endDate || !amountIncrease) {
+    return res.status(400).json({ error: '全項目を入力してください' });
+  }
+  const rate = await prisma.specialRate.create({
+    data: {
+      name,
+      startDate: new Date(startDate + 'T00:00:00+09:00'),
+      endDate: new Date(endDate + 'T23:59:59+09:00'),
+      amountIncrease: parseInt(amountIncrease),
+    },
+  });
+  res.status(201).json(rate);
+});
+
+// 特別時給更新
+router.put('/special-rates/:id', adminAuth, async (req, res) => {
+  const { id } = req.params;
+  const { name, startDate, endDate, amountIncrease } = req.body;
+  try {
+    const rate = await prisma.specialRate.update({
+      where: { id },
+      data: {
+        name,
+        startDate: new Date(startDate + 'T00:00:00+09:00'),
+        endDate: new Date(endDate + 'T23:59:59+09:00'),
+        amountIncrease: parseInt(amountIncrease),
+      },
+    });
+    res.json(rate);
+  } catch {
+    res.status(404).json({ error: '特別時給設定が見つかりません' });
+  }
+});
+
+// 特別時給削除
+router.delete('/special-rates/:id', adminAuth, async (req, res) => {
+  try {
+    await prisma.specialRate.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch {
+    res.status(404).json({ error: '特別時給設定が見つかりません' });
+  }
 });
 
 // --- 給与計算 ---
@@ -471,14 +528,22 @@ router.post('/payroll/calculate', adminAuth, async (req, res) => {
 
   const [year, mon] = yearMonth.split('-').map(Number);
   const jstOffset = 9 * 60 * 60 * 1000;
-  const start = new Date(new Date(year, mon - 1, 1).getTime() - jstOffset);
-  const end = new Date(new Date(year, mon, 1).getTime() - jstOffset);
+  const start = new Date(Date.UTC(year, mon - 1, 1) - jstOffset);
+  const end = new Date(Date.UTC(year, mon, 1) - jstOffset);
 
   // 月次設定取得
   const settingRow = await prisma.adminSetting.findUnique({
     where: { key: `monthly_settings_${yearMonth}` },
   });
   const monthlySettings = settingRow ? JSON.parse(settingRow.value) : { scheduledWorkDays: 22 };
+
+  // 対象月にかかる特別時給を取得
+  const specialRates = await prisma.specialRate.findMany({
+    where: {
+      startDate: { lt: end },
+      endDate: { gte: start },
+    },
+  });
 
   // 全スタッフ取得
   const staffs = await prisma.staff.findMany({ where: { isActive: true } });
@@ -503,7 +568,7 @@ router.post('/payroll/calculate', adminAuth, async (req, res) => {
   for (const staff of staffs) {
     const staffRecords = allRecords.filter((r) => r.staffId === staff.id);
     const extraInput = extraMap[staff.id] || {};
-    const result = calcPayroll(staff, staffRecords, yearMonth, extraInput, monthlySettings);
+    const result = calcPayroll(staff, staffRecords, yearMonth, extraInput, monthlySettings, specialRates);
 
     // DB保存（upsert）
     await prisma.payrollRecord.upsert({

@@ -44,7 +44,8 @@ model Staff {
   pensionAmount          Int            @default(0) @map("pension_amount")
   hasMealDeduction       Boolean        @default(false) @map("has_meal_deduction")
   rentDeduction          Int            @default(0) @map("rent_deduction")
-  hasTransportAllowance  Boolean        @default(false) @map("has_transport_allowance")
+  hasTransportAllowance      Boolean  @default(false) @map("has_transport_allowance")
+  transportAllowanceDaily    Int?     @map("transport_allowance_daily")
   employeeUrlToken       String         @unique @map("employee_url_token") @db.VarChar(64)
   employeePasswordHash   String?        @map("employee_password_hash")
   isActive               Boolean        @default(true) @map("is_active")
@@ -63,6 +64,7 @@ model TimeRecord {
   staffId    String     @map("staff_id")
   recordType RecordType @map("record_type")
   recordedAt DateTime   @map("recorded_at")
+  mealCount  Int        @default(0) @map("meal_count")
   isModified Boolean    @default(false) @map("is_modified")
   modifiedBy String?    @map("modified_by")
   modifiedAt DateTime?  @map("modified_at")
@@ -129,4 +131,16 @@ model AdminSetting {
   value String
 
   @@map("admin_settings")
+}
+
+model SpecialRate {
+  id              String   @id @default(uuid())
+  name            String
+  startDate       DateTime @map("start_date")
+  endDate         DateTime @map("end_date")
+  amountIncrease  Int      @map("amount_increase")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("special_rates")
 }

@@ -1,11 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, Users, Clock, Calculator, FileText, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Clock, Star, Calculator, FileText, LogOut } from 'lucide-react';
 
 const navItems = [
   { to: '/admin', label: 'ダッシュボード', end: true, icon: LayoutDashboard },
   { to: '/admin/staff', label: 'スタッフ管理', icon: Users },
   { to: '/admin/attendance', label: '勤怠管理', icon: Clock },
+  { to: '/admin/special-rate', label: '特別時給', icon: Star },
   { to: '/admin/payroll', label: '給与計算', icon: Calculator },
   { to: '/admin/reports', label: '帳票出力', icon: FileText },
 ];

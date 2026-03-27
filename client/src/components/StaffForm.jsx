@@ -13,9 +13,9 @@ const defaultValues = {
   healthInsuranceAmount: 0,
   careInsuranceAmount: 0,
   pensionAmount: 0,
-  hasMealDeduction: false,
   rentDeduction: 0,
   hasTransportAllowance: false,
+  transportAllowanceDaily: '',
   employeePassword: '',
 };
 
@@ -46,9 +46,9 @@ export default function StaffForm({ staff, onSubmit, onCancel }) {
         healthInsuranceAmount: staff.healthInsuranceAmount || 0,
         careInsuranceAmount: staff.careInsuranceAmount || 0,
         pensionAmount: staff.pensionAmount || 0,
-        hasMealDeduction: staff.hasMealDeduction || false,
         rentDeduction: staff.rentDeduction || 0,
         hasTransportAllowance: staff.hasTransportAllowance || false,
+        transportAllowanceDaily: staff.transportAllowanceDaily ?? '',
         employeePassword: '',
       });
     }
@@ -185,17 +185,22 @@ export default function StaffForm({ staff, onSubmit, onCancel }) {
       {/* 控除・手当 */}
       <section>
         {sectionHeader(HandCoins, '控除・手当')}
-        <div className="grid grid-cols-3 gap-4">
-          <label className="flex items-center gap-2 text-sm text-gray-600">
-            <input type="checkbox" checked={form.hasMealDeduction}
-              onChange={(e) => set('hasMealDeduction', e.target.checked)} />
-            食事代控除対象
-          </label>
+        <div className="grid grid-cols-3 gap-4 items-center">
           <label className="flex items-center gap-2 text-sm text-gray-600">
             <input type="checkbox" checked={form.hasTransportAllowance}
               onChange={(e) => set('hasTransportAllowance', e.target.checked)} />
             交通費支給
           </label>
+          {form.hasTransportAllowance && (
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">日額（円）</label>
+              <input type="number" value={form.transportAllowanceDaily}
+                onChange={(e) => set('transportAllowanceDaily', e.target.value)}
+                placeholder="500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              <p className="text-xs text-gray-400 mt-0.5">未入力で500円/日</p>
+            </div>
+          )}
         </div>
         <div className="mt-3">
           <label className="block text-sm text-gray-600 mb-1">家賃控除（月額・円、0で控除なし）</label>

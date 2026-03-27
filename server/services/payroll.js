@@ -2,15 +2,38 @@ import { calcMonthlyAttendance } from './attendance.js';
 import { calcIncomeTax } from './tax.js';
 
 /**
+ * 特別時給の増額を取得（該当日に複数重なる場合は合算）
+ * @param dateStr - 'YYYY-MM-DD'
+ * @param specialRates - SpecialRate配列
+ * @returns 増額合計（円）
+ */
+function getSpecialIncrease(dateStr, specialRates) {
+  if (!specialRates || specialRates.length === 0) return 0;
+  const dayStart = new Date(dateStr + 'T00:00:00+09:00');
+  const dayEnd = new Date(dateStr + 'T23:59:59+09:00');
+  let increase = 0;
+  for (const sr of specialRates) {
+    const srStart = new Date(sr.startDate);
+    const srEnd = new Date(sr.endDate);
+    // 期間が日と重なるか判定（startDate〜endDateの日付範囲）
+    if (srStart <= dayEnd && srEnd >= dayStart) {
+      increase += sr.amountIncrease;
+    }
+  }
+  return increase;
+}
+
+/**
  * 1名分の給与計算
  * @param staff - スタッフ情報
  * @param records - 月間の打刻レコード
  * @param yearMonth - 'YYYY-MM'
  * @param extraInput - 月次手動入力 { mealCount, mealDeductionCount }
  * @param monthlySettings - { scheduledWorkDays } 所定労働日数
+ * @param specialRates - SpecialRate配列（特別時給設定）
  * @returns 給与計算結果
  */
-export function calcPayroll(staff, records, yearMonth, extraInput = {}, monthlySettings = {}) {
+export function calcPayroll(staff, records, yearMonth, extraInput = {}, monthlySettings = {}, specialRates = []) {
   const attendance = calcMonthlyAttendance(records, yearMonth);
 
   const {
@@ -20,6 +43,8 @@ export function calcPayroll(staff, records, yearMonth, extraInput = {}, monthlyS
     overtimeMinutes,
     nightWorkMinutes,
     holidayWorkMinutes,
+    daySummaries,
+    holidayMap,
   } = attendance;
 
   // --- 支給額計算 ---
@@ -27,21 +52,110 @@ export function calcPayroll(staff, records, yearMonth, extraInput = {}, monthlyS
   let overtimePay = 0;
   let nightPay = 0;
   let holidayPay = 0;
+  let specialRateIncrease = 0;
 
   if (staff.salaryType === 'hourly') {
-    // 時給制
-    const rate = staff.hourlyRate || 0;
-    basePay = Math.round(rate * (normalWorkMinutes / 60));
-    overtimePay = Math.round(rate * 1.25 * (overtimeMinutes / 60));
-    nightPay = Math.round(rate * 1.25 * (nightWorkMinutes / 60));
-    holidayPay = Math.round(rate * 1.25 * (holidayWorkMinutes / 60));
+    const baseRate = staff.hourlyRate || 0;
+    const hasSpecial = specialRates && specialRates.length > 0;
+
+    if (hasSpecial) {
+      // 日別計算: 特別時給がある場合は日ごとにレートを決定して合算
+      // 通常日の深夜時間を追跡（二重計算防止用）
+      let totalNormalDayNight = 0;
+      let totalOvertimeRaw = 0;
+
+      for (const d of daySummaries) {
+        if (d.totalWorkMinutes === 0) continue;
+        const increase = getSpecialIncrease(d.dateStr, specialRates);
+        const dayRate = baseRate + increase;
+        const isHoliday = holidayMap.get(d.dateStr) || false;
+
+        if (isHoliday) {
+          // 休日: 全労働時間を基本給 + 休日割増
+          basePay += dayRate * (d.totalWorkMinutes / 60);
+          holidayPay += dayRate * 0.25 * (d.totalWorkMinutes / 60);
+          nightPay += dayRate * 0.25 * (d.nightMinutes / 60);
+        } else {
+          // 通常日: 全労働時間を基本給
+          basePay += dayRate * (d.totalWorkMinutes / 60);
+          overtimePay += dayRate * 0.25 * (d.overtimeMinutes / 60);
+          nightPay += dayRate * 0.25 * (d.nightMinutes / 60);
+          totalNormalDayNight += d.nightMinutes;
+          totalOvertimeRaw += d.overtimeMinutes;
+        }
+
+        if (increase > 0) {
+          specialRateIncrease += increase * (d.totalWorkMinutes / 60);
+        }
+      }
+
+      // 残業と深夜の二重計算を補正（通常日の深夜残業分）
+      // 既存ロジックと同様: 残業時間から深夜分を除外
+      const pureOvertimeMinutes = Math.max(0, totalOvertimeRaw - totalNormalDayNight);
+      // overtimePayを再計算（日ごとの増額レートを考慮するため、差分を調整）
+      // → 日別計算なので、overtimePay の各日分から深夜重複分を引く必要がある
+      // 簡易方式: 日別に正確に計算するため、overtimePayをリセットして再計算
+      overtimePay = 0;
+      for (const d of daySummaries) {
+        if (d.totalWorkMinutes === 0) continue;
+        const isHoliday = holidayMap.get(d.dateStr) || false;
+        if (isHoliday) continue;
+        const increase = getSpecialIncrease(d.dateStr, specialRates);
+        const dayRate = baseRate + increase;
+        // その日の純残業時間（深夜でない残業）
+        const dayPureOvertime = Math.max(0, d.overtimeMinutes - d.nightMinutes);
+        overtimePay += dayRate * 0.25 * (dayPureOvertime / 60);
+      }
+
+      basePay = Math.round(basePay);
+      overtimePay = Math.round(overtimePay);
+      nightPay = Math.round(nightPay);
+      holidayPay = Math.round(holidayPay);
+      specialRateIncrease = Math.round(specialRateIncrease);
+    } else {
+      // 従来ロジック: 単一レートで一括計算
+      basePay = Math.round(baseRate * (totalWorkMinutes / 60));
+      overtimePay = Math.round(baseRate * 0.25 * (overtimeMinutes / 60));
+      nightPay = Math.round(baseRate * 0.25 * (nightWorkMinutes / 60));
+      holidayPay = Math.round(baseRate * 0.25 * (holidayWorkMinutes / 60));
+    }
   } else {
     // 月給制
     basePay = staff.monthlySalary || 0;
     const overtimeRate = staff.hourlyRate || 0;
-    overtimePay = Math.round(overtimeRate * 1.25 * (overtimeMinutes / 60));
-    nightPay = Math.round(overtimeRate * 1.25 * (nightWorkMinutes / 60));
-    holidayPay = Math.round(overtimeRate * 1.25 * (holidayWorkMinutes / 60));
+
+    const hasSpecial = specialRates && specialRates.length > 0;
+    if (hasSpecial) {
+      // 月給制: 残業等の割増計算にのみ増額レートを適用
+      for (const d of daySummaries) {
+        if (d.totalWorkMinutes === 0) continue;
+        const increase = getSpecialIncrease(d.dateStr, specialRates);
+        const dayOvertimeRate = overtimeRate + increase;
+        const isHoliday = holidayMap.get(d.dateStr) || false;
+
+        if (isHoliday) {
+          overtimePay += dayOvertimeRate * 1.25 * (d.totalWorkMinutes / 60);
+          nightPay += dayOvertimeRate * 0.25 * (d.nightMinutes / 60);
+        } else {
+          const dayPureOvertime = Math.max(0, d.overtimeMinutes - d.nightMinutes);
+          overtimePay += dayOvertimeRate * 1.25 * (dayPureOvertime / 60);
+          nightPay += dayOvertimeRate * 0.25 * (d.nightMinutes / 60);
+        }
+
+        if (increase > 0) {
+          specialRateIncrease += increase * (d.totalWorkMinutes / 60);
+        }
+      }
+      overtimePay = Math.round(overtimePay);
+      nightPay = Math.round(nightPay);
+      holidayPay = 0; // holidayは overtimePay に含む
+      specialRateIncrease = Math.round(specialRateIncrease);
+    } else {
+      // 従来ロジック
+      overtimePay = Math.round(overtimeRate * 1.25 * (overtimeMinutes / 60));
+      nightPay = Math.round(overtimeRate * 0.25 * (nightWorkMinutes / 60));
+      holidayPay = Math.round(overtimeRate * 1.25 * (holidayWorkMinutes / 60));
+    }
 
     // 欠勤控除（ノーワーク・ノーペイ）
     const scheduledDays = monthlySettings.scheduledWorkDays || 22;
@@ -53,14 +167,14 @@ export function calcPayroll(staff, records, yearMonth, extraInput = {}, monthlyS
   }
 
   // 交通費
-  const transportAllowance = staff.hasTransportAllowance ? workDays * 500 : 0;
+  const dailyTransport = staff.transportAllowanceDaily || 500;
+  const transportAllowance = staff.hasTransportAllowance ? workDays * dailyTransport : 0;
 
-  // まかない手当
-  const mealCount = extraInput.mealCount || 0;
-  const mealAllowance = mealCount * 125;
+  // まかない手当は廃止（常に0）
+  const mealAllowance = 0;
 
-  // 支給総額
-  const grossPay = basePay + overtimePay + nightPay + holidayPay + transportAllowance + mealAllowance;
+  // 支給総額（specialRateIncreaseは既にbasePayに含まれているため加算不要）
+  const grossPay = basePay + overtimePay + nightPay + holidayPay + transportAllowance;
 
   // --- 控除額計算 ---
   const healthInsurance = staff.healthInsuranceAmount || 0;
@@ -79,9 +193,10 @@ export function calcPayroll(staff, records, yearMonth, extraInput = {}, monthlyS
   const taxableAmount = grossPay - transportAllowance - socialInsurance;
   const incomeTax = calcIncomeTax(taxableAmount, staff.taxColumn);
 
-  // 食事代控除
-  const mealDeductionCount = extraInput.mealDeductionCount || 0;
-  const mealDeduction = staff.hasMealDeduction ? mealDeductionCount * 125 : 0;
+  // 食事代控除（TimeRecordのclock_outレコードから自動集計）
+  const mealDeduction = records
+    .filter(r => r.recordType === 'clock_out')
+    .reduce((sum, r) => sum + (r.mealCount || 0), 0) * 125;
 
   // 家賃控除
   const rentDeduction = staff.rentDeduction || 0;
@@ -115,6 +230,7 @@ export function calcPayroll(staff, records, yearMonth, extraInput = {}, monthlyS
     rentDeduction,
     totalDeduction,
     netPay,
+    specialRateIncrease,
   };
 }
 

@@ -8,6 +8,7 @@ import PunchPage from './pages/PunchPage';
 import Attendance from './pages/Attendance';
 import Payroll from './pages/Payroll';
 import Reports from './pages/Reports';
+import SpecialRate from './pages/SpecialRate';
 import EmployeePage from './pages/EmployeePage';
 
 function ProtectedRoute({ children }) {
@@ -30,6 +31,7 @@ function AppRoutes() {
         <Route index element={<AdminDashboard />} />
         <Route path="staff" element={<StaffManagement />} />
         <Route path="attendance" element={<Attendance />} />
+        <Route path="special-rate" element={<SpecialRate />} />
         <Route path="payroll" element={<Payroll />} />
         <Route path="reports" element={<Reports />} />
       </Route>

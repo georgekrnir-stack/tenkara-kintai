@@ -129,22 +129,20 @@ export default function Payroll() {
             </div>
           </div>
 
-          {/* 手動入力（食数等） */}
+          {/* 手動入力（備考） */}
           <div className="bg-white rounded-xl shadow-lg p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">月次手動入力（食数等）</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">月次手動入力（備考）</h3>
             <table className="w-full text-sm">
               <thead className="gradient-table-header border-b">
                 <tr>
                   <th className="text-left px-3 py-2 font-semibold text-gray-600">スタッフ</th>
-                  <th className="text-center px-3 py-2 font-semibold text-gray-600">まかない食数</th>
-                  <th className="text-center px-3 py-2 font-semibold text-gray-600">食事代控除食数</th>
                   <th className="text-center px-3 py-2 font-semibold text-gray-600">備考</th>
                   <th className="text-center px-3 py-2 font-semibold text-gray-600">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {staffList.map((s) => {
-                  const ex = extraInputs[s.id] || { mealCount: 0, mealDeductionCount: 0, notes: '' };
+                  const ex = extraInputs[s.id] || { notes: '' };
                   return (
                     <ExtraInputRow key={s.id} staff={s} extra={ex} onSave={(data) => saveExtraInput(s.id, data)} />
                   );
@@ -209,13 +207,9 @@ export default function Payroll() {
 }
 
 function ExtraInputRow({ staff, extra, onSave }) {
-  const [mealCount, setMealCount] = useState(extra.mealCount || 0);
-  const [mealDeductionCount, setMealDeductionCount] = useState(extra.mealDeductionCount || 0);
   const [notes, setNotes] = useState(extra.notes || '');
 
   useEffect(() => {
-    setMealCount(extra.mealCount || 0);
-    setMealDeductionCount(extra.mealDeductionCount || 0);
     setNotes(extra.notes || '');
   }, [extra]);
 
@@ -223,19 +217,11 @@ function ExtraInputRow({ staff, extra, onSave }) {
     <tr className="border-b even:bg-gray-50/50">
       <td className="px-3 py-2">{staff.name}</td>
       <td className="px-3 py-2 text-center">
-        <input type="number" value={mealCount} onChange={(e) => setMealCount(parseInt(e.target.value) || 0)}
-          className="border rounded-lg px-2 py-1 w-16 text-center text-sm" />
-      </td>
-      <td className="px-3 py-2 text-center">
-        <input type="number" value={mealDeductionCount} onChange={(e) => setMealDeductionCount(parseInt(e.target.value) || 0)}
-          className="border rounded-lg px-2 py-1 w-16 text-center text-sm" />
-      </td>
-      <td className="px-3 py-2 text-center">
         <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)}
-          className="border rounded-lg px-2 py-1 w-32 text-sm" />
+          className="border rounded-lg px-2 py-1 w-48 text-sm" />
       </td>
       <td className="px-3 py-2 text-center">
-        <button onClick={() => onSave({ mealCount, mealDeductionCount, notes })}
+        <button onClick={() => onSave({ notes })}
           className="gradient-header text-white px-3 py-1 rounded-lg text-xs hover:opacity-90 btn-hover inline-flex items-center gap-1">
           <Save size={11} />保存
         </button>
@@ -286,8 +272,8 @@ function PayrollDetail({ data, month, onBack }) {
               {data.overtimePay > 0 && <><span className="text-gray-600">残業手当:</span><span className="text-right">{formatYen(data.overtimePay)}</span></>}
               {data.nightPay > 0 && <><span className="text-gray-600">深夜手当:</span><span className="text-right">{formatYen(data.nightPay)}</span></>}
               {data.holidayPay > 0 && <><span className="text-gray-600">休日手当:</span><span className="text-right">{formatYen(data.holidayPay)}</span></>}
+              {data.specialRateIncrease > 0 && <><span className="text-gray-600">特別時給手当:</span><span className="text-right">{formatYen(data.specialRateIncrease)}</span></>}
               {data.transportAllowance > 0 && <><span className="text-gray-600">交通費:</span><span className="text-right">{formatYen(data.transportAllowance)}</span></>}
-              {data.mealAllowance > 0 && <><span className="text-gray-600">まかない手当:</span><span className="text-right">{formatYen(data.mealAllowance)}</span></>}
             </div>
             <div className="border-t mt-2 pt-1 grid grid-cols-2 font-medium">
               <span>支給額合計:</span><span className="text-right">{formatYen(data.grossPay)}</span>

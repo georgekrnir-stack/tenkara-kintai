@@ -126,8 +126,8 @@ router.get('/attendance', adminAuth, async (req, res) => {
 
   const [year, mon] = month.split('-').map(Number);
   const jstOffset = 9 * 60 * 60 * 1000;
-  const start = new Date(new Date(year, mon - 1, 1).getTime() - jstOffset);
-  const end = new Date(new Date(year, mon, 1).getTime() - jstOffset);
+  const start = new Date(Date.UTC(year, mon - 1, 1) - jstOffset);
+  const end = new Date(Date.UTC(year, mon, 1) - jstOffset);
 
   const records = await prisma.timeRecord.findMany({
     where: { recordedAt: { gte: start, lt: end } },
@@ -282,7 +282,6 @@ function renderPayslip(doc, record, staffName, month) {
     ['深夜手当', record.nightPay],
     ['休日手当', record.holidayPay],
     ['交通費', record.transportAllowance],
-    ['まかない手当', record.mealAllowance],
   ];
   for (const [label, val] of payItems) {
     if (val > 0) {

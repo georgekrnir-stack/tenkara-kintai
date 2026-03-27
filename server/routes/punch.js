@@ -99,7 +99,7 @@ router.get('/staff-list', async (req, res) => {
 
 // 打刻実行
 router.post('/', async (req, res) => {
-  const { staffId, recordType } = req.body;
+  const { staffId, recordType, mealCount: rawMealCount } = req.body;
 
   if (!staffId || !recordType) {
     return res.status(400).json({ error: 'staffIdとrecordTypeは必須です' });
@@ -132,12 +132,18 @@ router.post('/', async (req, res) => {
     });
   }
 
+  // mealCountは退勤時のみ保存（0〜2）
+  const mealCount = recordType === 'clock_out'
+    ? Math.max(0, Math.min(2, parseInt(rawMealCount) || 0))
+    : 0;
+
   const now = new Date();
   const record = await prisma.timeRecord.create({
     data: {
       staffId,
       recordType,
       recordedAt: now,
+      mealCount,
     },
   });
 
@@ -148,9 +154,13 @@ router.post('/', async (req, res) => {
     timeZone: 'Asia/Tokyo',
   });
 
+  const mealMsg = recordType === 'clock_out' && mealCount > 0
+    ? ` (まかない${mealCount}食)`
+    : '';
+
   res.status(201).json({
     record,
-    message: `${staff.name}さん、${recordTypeLabel[recordType]}しました ${timeStr}`,
+    message: `${staff.name}さん、${recordTypeLabel[recordType]}しました ${timeStr}${mealMsg}`,
   });
 });
 

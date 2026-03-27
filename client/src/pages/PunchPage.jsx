@@ -16,11 +16,16 @@ const statusLabel = {
   clocked_out: '退勤済み',
 };
 
-const buttons = [
+const upperButtons = [
   { type: 'clock_in', label: '出勤', color: 'bg-green-500 hover:bg-green-600', allowedFrom: ['not_working', 'clocked_out'], icon: LogIn },
-  { type: 'clock_out', label: '退勤', color: 'bg-red-500 hover:bg-red-600', allowedFrom: ['working'], icon: LogOut },
   { type: 'break_start', label: '休憩開始', color: 'bg-yellow-500 hover:bg-yellow-600', allowedFrom: ['working'], icon: Coffee },
   { type: 'break_end', label: '休憩終了', color: 'bg-blue-500 hover:bg-blue-600', allowedFrom: ['on_break'], icon: Play },
+];
+
+const clockOutButtons = [
+  { type: 'clock_out', mealCount: 0, label: '退勤 まかない0', color: 'bg-red-400 hover:bg-red-500', allowedFrom: ['working'], icon: LogOut },
+  { type: 'clock_out', mealCount: 1, label: '退勤 まかない1', color: 'bg-red-500 hover:bg-red-600', allowedFrom: ['working'], icon: LogOut },
+  { type: 'clock_out', mealCount: 2, label: '退勤 まかない2', color: 'bg-red-600 hover:bg-red-700', allowedFrom: ['working'], icon: LogOut },
 ];
 
 export default function PunchPage() {
@@ -60,11 +65,11 @@ export default function PunchPage() {
     }
   }, [feedback]);
 
-  const handlePunch = async (recordType) => {
+  const handlePunch = async (recordType, mealCount = 0) => {
     if (!selected || loading) return;
     setLoading(true);
     try {
-      const res = await api.post('/punch', { staffId: selected.id, recordType });
+      const res = await api.post('/punch', { staffId: selected.id, recordType, mealCount });
       setFeedback({ type: 'success', message: res.data.message });
       setSelected(null);
       fetchStaffList();
@@ -119,8 +124,9 @@ export default function PunchPage() {
               <X size={20} />
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            {buttons.map((btn) => {
+          {/* 上段: 出勤・休憩開始・休憩終了 */}
+          <div className="grid grid-cols-3 gap-3 mb-3">
+            {upperButtons.map((btn) => {
               const enabled = btn.allowedFrom.includes(selected.status);
               const Icon = btn.icon;
               return (
@@ -128,11 +134,31 @@ export default function PunchPage() {
                   key={btn.type}
                   onClick={() => enabled && handlePunch(btn.type)}
                   disabled={!enabled || loading}
-                  className={`py-6 rounded-xl text-white text-2xl font-bold transition-all flex items-center justify-center gap-3 shadow-lg ${
+                  className={`py-5 rounded-xl text-white text-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg ${
                     enabled ? `${btn.color} btn-hover` : 'bg-gray-300 cursor-not-allowed'
                   } disabled:opacity-50`}
                 >
-                  <Icon size={28} />
+                  <Icon size={24} />
+                  {btn.label}
+                </button>
+              );
+            })}
+          </div>
+          {/* 下段: 退勤×3（まかない食数選択） */}
+          <div className="grid grid-cols-3 gap-3">
+            {clockOutButtons.map((btn) => {
+              const enabled = btn.allowedFrom.includes(selected.status);
+              const Icon = btn.icon;
+              return (
+                <button
+                  key={`clock_out_${btn.mealCount}`}
+                  onClick={() => enabled && handlePunch(btn.type, btn.mealCount)}
+                  disabled={!enabled || loading}
+                  className={`py-5 rounded-xl text-white text-lg font-bold transition-all flex items-center justify-center gap-2 shadow-lg ${
+                    enabled ? `${btn.color} btn-hover` : 'bg-gray-300 cursor-not-allowed'
+                  } disabled:opacity-50`}
+                >
+                  <Icon size={22} />
                   {btn.label}
                 </button>
               );

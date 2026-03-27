@@ -63,8 +63,8 @@ router.get('/attendance', employeeAuth, async (req, res) => {
 
   const [year, mon] = month.split('-').map(Number);
   const jstOffset = 9 * 60 * 60 * 1000;
-  const start = new Date(new Date(year, mon - 1, 1).getTime() - jstOffset);
-  const end = new Date(new Date(year, mon, 1).getTime() - jstOffset);
+  const start = new Date(Date.UTC(year, mon - 1, 1) - jstOffset);
+  const end = new Date(Date.UTC(year, mon, 1) - jstOffset);
 
   const records = await prisma.timeRecord.findMany({
     where: { staffId: req.staffId, recordedAt: { gte: start, lt: end } },
