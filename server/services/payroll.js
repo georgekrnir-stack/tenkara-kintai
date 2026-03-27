@@ -181,9 +181,9 @@ export function calcPayroll(staff, records, yearMonth, extraInput = {}, monthlyS
   const careInsurance = staff.careInsuranceAmount || 0;
   const pension = staff.pensionAmount || 0;
 
-  // 雇用保険料
+  // 雇用保険料（令和7年度 一般の事業 労働者負担 5.5/1000）
   const employmentInsurance = staff.hasEmploymentInsurance
-    ? Math.floor(grossPay * 0.005)
+    ? Math.round(grossPay * 0.0055)
     : 0;
 
   // 社会保険料合計
