@@ -570,13 +570,14 @@ router.post('/payroll/calculate', adminAuth, async (req, res) => {
     const extraInput = extraMap[staff.id] || {};
     const result = calcPayroll(staff, staffRecords, yearMonth, extraInput, monthlySettings, specialRates);
 
-    // DB保存（upsert）
+    // DB保存（upsert）— specialRateIncreaseはPayrollRecordに無いカラムなので除外
+    const { specialRateIncrease, ...dbResult } = result;
     await prisma.payrollRecord.upsert({
       where: {
         staffId_yearMonth_isBonus: { staffId: staff.id, yearMonth, isBonus: false },
       },
-      update: { ...result, calculatedAt: new Date() },
-      create: { staffId: staff.id, yearMonth, isBonus: false, ...result, calculatedAt: new Date() },
+      update: { ...dbResult, calculatedAt: new Date() },
+      create: { staffId: staff.id, yearMonth, isBonus: false, ...dbResult, calculatedAt: new Date() },
     });
 
     results.push({
