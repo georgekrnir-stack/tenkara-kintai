@@ -597,7 +597,7 @@ router.get('/payroll', adminAuth, async (req, res) => {
   if (!month) return res.status(400).json({ error: 'monthは必須です' });
 
   const records = await prisma.payrollRecord.findMany({
-    where: { yearMonth: month },
+    where: { yearMonth: month, isBonus: false },
     include: { staff: { select: { id: true, name: true } } },
     orderBy: { staff: { createdAt: 'asc' } },
   });
