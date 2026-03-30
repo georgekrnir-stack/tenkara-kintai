@@ -28,6 +28,12 @@ const C = {
   subtotalBg: '#e8edf3',
 };
 
+/** Content-Disposition ヘッダー（日本語ファイル名対応） */
+function safeContentDisposition(disposition, filename) {
+  const encoded = encodeURIComponent(filename);
+  return `${disposition}; filename="${encoded}"; filename*=UTF-8''${encoded}`;
+}
+
 // === ヘルパー関数 ===
 
 function toWareki(yearMonth) {
@@ -144,7 +150,7 @@ router.get('/payslip/:staffId', adminAuth, async (req, res) => {
 
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `inline; filename="payslip_${record.staff.name}_${month}.pdf"`);
+  res.setHeader('Content-Disposition', safeContentDisposition('inline', `payslip_${record.staff.name}_${month}.pdf`));
   doc.pipe(res);
 
   renderPayslip(doc, record, record.staff.name, month);
